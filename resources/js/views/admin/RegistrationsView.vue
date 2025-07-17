@@ -215,6 +215,16 @@
                         >
                           <i class="fas fa-edit"></i>
                         </button>
+
+                        <!-- Botón de Check-out -->
+                        <button 
+                          v-if="registration.status === 'active'"
+                          class="btn btn-sm btn-outline-success"
+                          @click="openCheckOutModal(registration)"
+                          title="Check-out"
+                        >
+                          <i class="fas fa-sign-out-alt"></i>
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -257,6 +267,220 @@
                 </li>
               </ul>
             </nav>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal de Check-out -->
+    <div 
+      v-if="showCheckOutModal"
+      class="modal fade show d-block" 
+      tabindex="-1" 
+      style="background-color: rgba(0,0,0,0.5);"
+    >
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">
+              <i class="fas fa-sign-out-alt text-success me-2"></i>
+              Check-out - {{ selectedRegistrationForCheckOut?.registration_code }}
+            </h5>
+            <button 
+              type="button" 
+              class="btn-close" 
+              @click="closeCheckOutModal"
+            ></button>
+          </div>
+          
+          <div class="modal-body" v-if="selectedRegistrationForCheckOut">
+            <!-- Información del registro -->
+            <div class="row mb-4">
+              <div class="col-md-6">
+                <div class="card bg-light">
+                  <div class="card-body">
+                    <h6 class="card-title">
+                      <i class="fas fa-user me-2"></i>Cliente
+                    </h6>
+                    <p class="mb-1"><strong>{{ selectedRegistrationForCheckOut.user.name }}</strong></p>
+                    <p class="mb-0 text-muted">{{ selectedRegistrationForCheckOut.user.email }}</p>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="card bg-light">
+                  <div class="card-body">
+                    <h6 class="card-title">
+                      <i class="fas fa-bed me-2"></i>Habitación
+                    </h6>
+                    <p class="mb-1">
+                      <strong>{{ selectedRegistrationForCheckOut.room.room_number }}</strong>
+                      <span class="badge bg-secondary ms-2">{{ selectedRegistrationForCheckOut.room.room_type?.name }}</span>
+                    </p>
+                    <p class="mb-0 text-muted">{{ selectedRegistrationForCheckOut.branch?.name }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Información de fechas -->
+            <div class="row mb-4">
+              <div class="col-md-6">
+                <div class="card border-success">
+                  <div class="card-body">
+                    <h6 class="card-title text-success">
+                      <i class="fas fa-calendar-check me-2"></i>Check-in
+                    </h6>
+                    <p class="mb-0">{{ formatDateTime(selectedRegistrationForCheckOut.actual_check_in) }}</p>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="card border-warning">
+                  <div class="card-body">
+                    <h6 class="card-title text-warning">
+                      <i class="fas fa-calendar-times me-2"></i>Check-out
+                    </h6>
+                    <p class="mb-0 fw-bold">{{ getCurrentDateTime() }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Duración de la estadía -->
+            <div class="alert alert-info">
+              <i class="fas fa-clock me-2"></i>
+              <strong>Duración de la estadía:</strong> {{ getStayDuration(selectedRegistrationForCheckOut.actual_check_in) }}
+            </div>
+
+            <!-- Huéspedes adicionales si los hay -->
+            <div v-if="selectedRegistrationForCheckOut.additional_guests && selectedRegistrationForCheckOut.additional_guests.length > 0" class="mb-3">
+              <h6>
+                <i class="fas fa-users me-2"></i>Huéspedes adicionales
+              </h6>
+              <div class="row">
+                <div 
+                  v-for="(guest, index) in selectedRegistrationForCheckOut.additional_guests" 
+                  :key="index"
+                  class="col-md-6 mb-2"
+                >
+                  <div class="border rounded p-2">
+                    <small>
+                      <strong>{{ guest.name }}</strong><br>
+                      {{ guest.document_type }}: {{ guest.document_number }}
+                    </small>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Formulario de check-out -->
+            <form @submit.prevent="processCheckOut">
+              <div class="mb-3">
+                <label class="form-label">
+                  <i class="fas fa-sticky-note me-2"></i>Notas de check-out
+                </label>
+                <textarea 
+                  v-model="checkOutForm.notes"
+                  class="form-control"
+                  rows="3"
+                  placeholder="Observaciones sobre el check-out, estado de la habitación, etc..."
+                ></textarea>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">
+                  <i class="fas fa-exclamation-triangle me-2"></i>Reporte de daños (opcional)
+                </label>
+                <textarea 
+                  v-model="checkOutForm.damage_report"
+                  class="form-control"
+                  rows="2"
+                  placeholder="Descripción de cualquier daño encontrado en la habitación..."
+                ></textarea>
+              </div>
+
+              <!-- Checklist de verificación -->
+              <div class="mb-3">
+                <h6>Checklist de verificación</h6>
+                <div class="form-check">
+                  <input 
+                    v-model="checkOutForm.room_cleaned"
+                    type="checkbox" 
+                    class="form-check-input"
+                    id="roomCleaned"
+                  >
+                  <label class="form-check-label" for="roomCleaned">
+                    Habitación revisada
+                  </label>
+                </div>
+                <div class="form-check">
+                  <input 
+                    v-model="checkOutForm.keys_returned"
+                    type="checkbox" 
+                    class="form-check-input"
+                    id="keysReturned"
+                  >
+                  <label class="form-check-label" for="keysReturned">
+                    Llaves devueltas
+                  </label>
+                </div>
+                <div class="form-check">
+                  <input 
+                    v-model="checkOutForm.minibar_checked"
+                    type="checkbox" 
+                    class="form-check-input"
+                    id="minibarChecked"
+                  >
+                  <label class="form-check-label" for="minibarChecked">
+                    Minibar revisado
+                  </label>
+                </div>
+                <div class="form-check">
+                  <input 
+                    v-model="checkOutForm.client_satisfied"
+                    type="checkbox" 
+                    class="form-check-input"
+                    id="clientSatisfied"
+                  >
+                  <label class="form-check-label" for="clientSatisfied">
+                    Cliente satisfecho con la estadía
+                  </label>
+                </div>
+              </div>
+
+              <!-- Confirmación -->
+              <div class="alert alert-warning">
+                <i class="fas fa-info-circle me-2"></i>
+                <strong>Importante:</strong> Al confirmar el check-out, la habitación será liberada automáticamente y el registro se marcará como completado. Esta acción no se puede deshacer.
+              </div>
+            </form>
+          </div>
+          
+          <div class="modal-footer">
+            <button 
+              type="button" 
+              class="btn btn-secondary" 
+              @click="closeCheckOutModal"
+              :disabled="processingCheckOut"
+            >
+              Cancelar
+            </button>
+            
+            <button 
+              type="button" 
+              class="btn btn-success"
+              @click="processCheckOut"
+              :disabled="processingCheckOut || !canProcessCheckOut()"
+            >
+              <span v-if="processingCheckOut">
+                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                Procesando...
+              </span>
+              <span v-else>
+                <i class="fas fa-check me-2"></i>Confirmar Check-out
+              </span>
+            </button>
           </div>
         </div>
       </div>
@@ -781,6 +1005,7 @@ export default {
       // Estados de modales
       showDirectRegistrationModal: false,
       showRegistrationDetailsModal: false,
+      showCheckOutModal: false,
       
       // Datos
       registrations: [],
@@ -832,7 +1057,19 @@ export default {
       },
       
       // Modal de detalles
-      selectedRegistration: null
+      selectedRegistration: null,
+
+      // Check-out
+      selectedRegistrationForCheckOut: null,
+      processingCheckOut: false,
+      checkOutForm: {
+        notes: '',
+        damage_report: '',
+        room_cleaned: false,
+        keys_returned: false,
+        minibar_checked: false,
+        client_satisfied: false
+      }
     }
   },
   
@@ -903,18 +1140,6 @@ export default {
       }
     },
     
-    // Método de prueba para API
-    async testBranchesAPI() {
-      console.log('Testing branches API...')
-      try {
-        const response = await sharedApi.getBranches()
-        console.log('RAW API Response:', response)
-        alert('API Response logged to console. Check browser dev tools.')
-      } catch (error) {
-        console.error('API Test Error:', error)
-        alert('Error testing API: ' + error.message)
-      }
-    },
     async fetchStats() {
       try {
         const response = await adminApi.getRegistrationStats()
@@ -967,6 +1192,139 @@ export default {
       }
       
       return pages
+    },
+
+    // ===== FUNCIONES DE CHECK-OUT =====
+
+    // Abrir modal de check-out
+    openCheckOutModal(registration) {
+      this.selectedRegistrationForCheckOut = registration
+      this.resetCheckOutForm()
+      this.showCheckOutModal = true
+    },
+
+    // Cerrar modal de check-out
+    closeCheckOutModal() {
+      this.showCheckOutModal = false
+      this.selectedRegistrationForCheckOut = null
+      this.resetCheckOutForm()
+    },
+
+    // Resetear formulario de check-out
+    resetCheckOutForm() {
+      this.checkOutForm = {
+        notes: '',
+        damage_report: '',
+        room_cleaned: false,
+        keys_returned: false,
+        minibar_checked: false,
+        client_satisfied: false
+      }
+    },
+
+    // Verificar si se puede procesar el check-out
+    canProcessCheckOut() {
+      // Requerir que al menos las llaves hayan sido devueltas
+      return this.checkOutForm.keys_returned
+    },
+
+    // Obtener fecha y hora actual formateada
+    getCurrentDateTime() {
+      const now = new Date()
+      return now.toLocaleString('es-ES', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    },
+
+    // Calcular duración de la estadía
+    getStayDuration(checkInDateTime) {
+      if (!checkInDateTime) return 'No disponible'
+      
+      const checkIn = new Date(checkInDateTime)
+      const now = new Date()
+      const diffTime = Math.abs(now - checkIn)
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
+      const diffHours = Math.floor((diffTime % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+      const diffMinutes = Math.floor((diffTime % (1000 * 60 * 60)) / (1000 * 60))
+      
+      if (diffDays > 0) {
+        return `${diffDays} día(s), ${diffHours} hora(s)`
+      } else if (diffHours > 0) {
+        return `${diffHours} hora(s), ${diffMinutes} minuto(s)`
+      } else {
+        return `${diffMinutes} minuto(s)`
+      }
+    },
+
+    // Procesar check-out
+    async processCheckOut() {
+      if (!this.canProcessCheckOut()) {
+        alert('Debe marcar al menos que las llaves fueron devueltas antes de proceder.')
+        return
+      }
+
+      this.processingCheckOut = true
+
+      try {
+        // Preparar datos para el check-out
+        const checkOutData = {
+          notes: this.checkOutForm.notes,
+          damage_report: this.checkOutForm.damage_report,
+          checkout_checklist: {
+            room_cleaned: this.checkOutForm.room_cleaned,
+            keys_returned: this.checkOutForm.keys_returned,
+            minibar_checked: this.checkOutForm.minibar_checked,
+            client_satisfied: this.checkOutForm.client_satisfied
+          }
+        }
+
+        // Llamar al API para procesar el check-out
+        const response = await adminApi.checkOutRegistration(
+          this.selectedRegistrationForCheckOut.id, 
+          checkOutData
+        )
+
+        if (response.data.success) {
+          // Mostrar mensaje de éxito
+          alert('Check-out procesado exitosamente')
+          
+          // Cerrar modal
+          this.closeCheckOutModal()
+          
+          // Recargar registros para mostrar el estado actualizado
+          this.fetchRegistrations()
+        } else {
+          throw new Error(response.data.message || 'Error al procesar el check-out')
+        }
+      } catch (error) {
+        console.error('Error processing checkout:', error)
+        
+        let message = 'Error al procesar el check-out'
+        
+        if (error.response?.data?.errors) {
+          // Errores de validación específicos
+          const errors = error.response.data.errors
+          const errorMessages = []
+          
+          Object.keys(errors).forEach(field => {
+            errorMessages.push(`${field}: ${errors[field].join(', ')}`)
+          })
+          
+          message = 'Errores de validación:\n' + errorMessages.join('\n')
+        } else if (error.response?.data?.message) {
+          message = error.response.data.message
+        } else if (error.message) {
+          message = error.message
+        }
+        
+        alert(message)
+      } finally {
+        this.processingCheckOut = false
+      }
     },
     
     // Modal de registro directo
@@ -1121,80 +1479,81 @@ export default {
     },
     
     // Crear registro directo
-    async submitDirectRegistration() {
-      if (!this.canSubmit()) return
-      
-      this.submitting = true
-      
-      try {
-        let userId = this.directRegistration.form.user_id
-        
-        // Si hay un nuevo usuario, crearlo primero
-        if (this.showNewUserForm && this.isNewUserFormValid() && !userId) {
-          console.log('Creating new user...')
-          const userResponse = await adminApi.createUser({
-            ...this.newUser,
-            password: 'temporal123',
-            password_confirmation: 'temporal123', // Confirmación de password
-            role: 'customer', // Rol requerido
-            is_active: true
-          })
-          
-          if (userResponse.data.success) {
-            userId = userResponse.data.data.id
-            console.log('User created successfully with ID:', userId)
-          } else {
-            throw new Error('Error al crear el usuario: ' + userResponse.data.message)
-          }
-        }
-        
-        // Crear el registro directo
-        console.log('Creating direct registration...')
-        const registrationData = {
-          ...this.directRegistration.form,
-          user_id: userId // Usar el userId (existente o recién creado)
-        }
-        
-        const response = await adminApi.createDirectRegistration(registrationData)
-        
-        if (response.data.success) {
-          // Mostrar mensaje de éxito simple
-          alert('Registro directo creado exitosamente')
-          
-          // Cerrar modal
-          this.showDirectRegistrationModal = false
-          
-          // Recargar registros
-          this.fetchRegistrations()
-        } else {
-          throw new Error(response.data.message || 'Error al crear el registro')
-        }
-      } catch (error) {
-        console.error('Error creating direct registration:', error)
-        let message = 'Error al crear el registro directo'
-        
-        if (error.response?.data?.errors) {
-          // Errores de validación específicos
-          const errors = error.response.data.errors
-          const errorMessages = []
-          
-          Object.keys(errors).forEach(field => {
-            errorMessages.push(`${field}: ${errors[field].join(', ')}`)
-          })
-          
-          message = 'Errores de validación:\n' + errorMessages.join('\n')
-        } else if (error.response?.data?.message) {
-          message = error.response.data.message
-        } else if (error.message) {
-          message = error.message
-        }
-        
-        alert(message)
-      } finally {
-        this.submitting = false
-      }
-    },
+    // Crear registro directo
+  async submitDirectRegistration() {
+    if (!this.canSubmit()) return
     
+    this.submitting = true
+    
+    try {
+      // Preparar datos para el registro directo
+      const registrationData = {
+        ...this.directRegistration.form
+      }
+
+      // Si hay un nuevo usuario, incluir sus datos en lugar de crear por separado
+      if (this.showNewUserForm && this.isNewUserFormValid() && !this.directRegistration.form.user_id) {
+        registrationData.new_user = {
+          name: this.newUser.name,
+          email: this.newUser.email,
+          document_type: this.newUser.document_type,
+          document_number: this.newUser.document_number,
+          phone: this.newUser.phone || null
+        }
+        // Quitar user_id para que el backend sepa que debe crear usuario
+        delete registrationData.user_id
+      }
+      
+      console.log('Creating direct registration with data:', registrationData)
+      
+      const response = await adminApi.createDirectRegistration(registrationData)
+      
+      if (response.data.success) {
+        // Mostrar mensaje de éxito
+        let message = 'Registro directo creado exitosamente'
+        if (response.data.data.user_created) {
+          message += '\n(Se creó un nuevo usuario)'
+        }
+        alert(message)
+        
+        // Cerrar modal
+        this.showDirectRegistrationModal = false
+        
+        // Recargar registros
+        this.fetchRegistrations()
+      } else {
+        throw new Error(response.data.message || 'Error al crear el registro')
+      }
+    } catch (error) {
+      console.error('Error creating direct registration:', error)
+      let message = 'Error al crear el registro directo'
+      
+      if (error.response?.data?.errors) {
+        // Errores de validación específicos
+        const errors = error.response.data.errors
+        const errorMessages = []
+        
+        Object.keys(errors).forEach(field => {
+          errorMessages.push(`${field}: ${errors[field].join(', ')}`)
+        })
+        
+        message = 'Errores de validación:\n' + errorMessages.join('\n')
+      } else if (error.response?.data?.message) {
+        message = error.response.data.message
+      } else if (error.message) {
+        message = error.message
+      }
+      
+      // Mostrar información adicional de debug si está disponible
+      if (error.response?.data?.debug) {
+        console.error('Debug info:', error.response.data.debug)
+      }
+      
+      alert(message)
+    } finally {
+      this.submitting = false
+    }
+  },
     // Ver detalles del registro
     async viewRegistration(registration) {
       try {
@@ -1339,5 +1698,22 @@ export default {
 .form-select:focus {
   border-color: #0d6efd;
   box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+/* Estilos específicos para el modal de check-out */
+.modal-header .modal-title i {
+  font-size: 1.2em;
+}
+
+.card.bg-light {
+  background-color: #f8f9fa !important;
+}
+
+.card.border-success {
+  border-color: #198754 !important;
+}
+
+.card.border-warning {
+  border-color: #ffc107 !important;
 }
 </style>

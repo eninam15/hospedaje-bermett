@@ -130,17 +130,17 @@
                   <option value="pending_payment">Pago Pendiente</option>
                   <option value="confirmed">Confirmada</option>
                   <option value="checked_in">Check-in</option>
-                  <option value="checked_out">Check-out</option>
+                  <option value="completed">Completada</option>
                   <option value="cancelled">Cancelada</option>
                 </select>
               </div>
               <div class="col-md-2">
                 <label class="form-label">Fecha desde</label>
-                <input v-model="filters.date_from" type="date" class="form-control" @change="applyFilters">
+                <input v-model="filters.check_in_date" type="date" class="form-control" @change="applyFilters">
               </div>
               <div class="col-md-2">
                 <label class="form-label">Fecha hasta</label>
-                <input v-model="filters.date_to" type="date" class="form-control" @change="applyFilters">
+                <input v-model="filters.check_out_date" type="date" class="form-control" @change="applyFilters">
               </div>
               <div class="col-md-4">
                 <label class="form-label">Buscar</label>
@@ -313,6 +313,17 @@
                           {{ expandedReservation === reservation.id ? 'Menos' : 'Más' }}
                         </button>
                         
+                        <!-- Check-in -->
+                        <button
+                          v-if="canCheckIn(reservation)"
+                          @click="openCheckInModal(reservation)"
+                          class="btn btn-sm btn-primary action-btn"
+                        >
+                          <i class="fas fa-sign-in-alt me-1"></i>
+                          Check-in
+                        </button>
+                        
+                        
                         <!-- Confirmar Pago -->
                         <button
                           v-if="canConfirmPayment(reservation)"
@@ -326,7 +337,7 @@
                         <!-- Cancelar -->
                         <button
                           v-if="canCancel(reservation)"
-                          @click="cancelReservation(reservation)"
+                          @click="openCancelModal(reservation)"
                           class="btn btn-sm btn-danger action-btn"
                         >
                           <i class="fas fa-times me-1"></i>
@@ -379,52 +390,37 @@
                     </div>
                   </div>
                   
-                  <!-- Desglose de Costos -->
-                  <div class="cost-breakdown mt-3">
-                    <h6><i class="fas fa-calculator me-2"></i>Desglose de Costos</h6>
+                  <!-- Información de Check-in/out si existe -->
+                  <div v-if="reservation.registration" class="registration-info mt-3">
+                    <h6><i class="fas fa-clipboard-check me-2"></i>Información de Registro</h6>
                     <div class="row">
                       <div class="col-md-6">
-                        <div class="cost-item">
-                          <span>Habitación ({{ reservation.total_nights }} noche{{ reservation.total_nights !== 1 ? 's' : '' }})</span>
-                          <span class="cost-amount">${{ formatCurrency(reservation.room_total) }}</span>
-                        </div>
-                        <div class="cost-item" v-if="reservation.services_total > 0">
-                          <span>Servicios adicionales</span>
-                          <span class="cost-amount">${{ formatCurrency(reservation.services_total) }}</span>
-                        </div>
-                        <div class="cost-item" v-if="reservation.needs_parking">
-                          <span>Estacionamiento</span>
-                          <span class="cost-amount">${{ formatCurrency(reservation.parking_fee) }}</span>
+                        <div class="info-grid">
+                          <div class="info-item" v-if="reservation.registration.actual_check_in">
+                            <strong>Check-in Realizado:</strong> {{ formatDateTime(reservation.registration.actual_check_in) }}
+                          </div>
+                          <div class="info-item" v-if="reservation.registration.actual_check_out">
+                            <strong>Check-out Realizado:</strong> {{ formatDateTime(reservation.registration.actual_check_out) }}
+                          </div>
+                          <div class="info-item" v-if="reservation.registration.registered_by">
+                            <strong>Registrado por:</strong> {{ reservation.registration.registeredBy?.name || 'N/A' }}
+                          </div>
                         </div>
                       </div>
                       <div class="col-md-6">
-                        <div class="cost-total">
-                          <span>Total</span>
-                          <span class="total-amount">${{ formatCurrency(reservation.total_amount) }}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- Estado de Pagos -->
-                  <div class="payments-status mt-3" v-if="reservation.payments && reservation.payments.length > 0">
-                    <h6><i class="fas fa-credit-card me-2"></i>Estado de Pagos</h6>
-                    <div class="payments-list">
-                      <div 
-                        v-for="payment in reservation.payments" 
-                        :key="payment.id"
-                        class="payment-item"
-                      >
-                        <div class="d-flex justify-content-between align-items-center">
-                          <div>
-                            <span class="payment-amount">${{ formatCurrency(payment.amount) }}</span>
-                            <small class="text-muted ms-2">{{ getPaymentMethodText(payment.payment_method) }}</small>
+                        <div class="info-grid">
+                          <div class="info-item" v-if="reservation.registration.additional_guests && reservation.registration.additional_guests.length > 0">
+                            <strong>Huéspedes Adicionales:</strong>
+                            <ul class="list-unstyled mt-1">
+                              <li v-for="guest in reservation.registration.additional_guests" :key="guest.name">
+                                {{ guest.name }} - {{ guest.document_type }}: {{ guest.document_number }}
+                              </li>
+                            </ul>
                           </div>
-                          <span :class="getPaymentStatusBadgeClass(payment.status)">
-                            {{ getPaymentStatusText(payment.status) }}
-                          </span>
+                          <div class="info-item" v-if="reservation.registration.notes">
+                            <strong>Notas:</strong> {{ reservation.registration.notes }}
+                          </div>
                         </div>
-                        <small class="text-muted">{{ formatDateTime(payment.created_at) }}</small>
                       </div>
                     </div>
                   </div>
@@ -468,14 +464,36 @@
         </div>
       </div>
     </div>
+
+    <!-- Check-in Modal -->
+    <CheckInModal
+      v-if="showCheckInModal"
+      :reservation="selectedReservation"
+      @close="closeCheckInModal"
+      @success="handleCheckInSuccess"
+    />
+
+    <!-- Cancel Modal -->
+    <CancelReservationModal
+      v-if="showCancelModal"
+      :reservation="selectedReservation"
+      @close="closeCancelModal"
+      @success="handleCancelSuccess"
+    />
   </div>
 </template>
 
 <script>
 import { adminApi, apiHelpers } from '../../services/api'
+import CheckInModal from './modals/CheckInModal.vue'
+import CancelReservationModal from './modals/CancelReservationModal.vue'
 
 export default {
   name: 'ReservationsView',
+  components: {
+    CheckInModal,
+    CancelReservationModal
+  },
   data() {
     return {
       loading: false,
@@ -486,11 +504,16 @@ export default {
       searchTimeout: null,
       expandedReservation: null,
       
+      // Modales
+      showCheckInModal: false,
+      showCancelModal: false,
+      selectedReservation: null,
+      
       // Filtros
       filters: {
         status: '',
-        date_from: '',
-        date_to: '',
+        check_in_date: '',
+        check_out_date: '',
         search: ''
       },
       
@@ -550,7 +573,6 @@ export default {
   },
   
   beforeUnmount() {
-    // Limpiar timeout si existe
     if (this.searchTimeout) {
       clearTimeout(this.searchTimeout)
     }
@@ -579,7 +601,7 @@ export default {
     async loadStats() {
       try {
         const response = await adminApi.getReservationStats()
-        this.stats = response.data
+        this.stats = response.data.data || response.data
       } catch (error) {
         console.error('Error cargando estadísticas:', error)
       }
@@ -592,6 +614,44 @@ export default {
       ])
     },
     
+    // Métodos de modales
+    openCheckInModal(reservation) {
+      this.selectedReservation = reservation
+      this.showCheckInModal = true
+    },
+    
+    closeCheckInModal() {
+      this.showCheckInModal = false
+      this.selectedReservation = null
+    },
+    
+    
+    
+    openCancelModal(reservation) {
+      this.selectedReservation = reservation
+      this.showCancelModal = true
+    },
+    
+    closeCancelModal() {
+      this.showCancelModal = false
+      this.selectedReservation = null
+    },
+    
+    // Handlers de eventos de modales
+    async handleCheckInSuccess() {
+      this.closeCheckInModal()
+      await this.refreshData()
+      this.$toast.success('Check-in realizado exitosamente')
+    },
+    
+   
+    
+    async handleCancelSuccess() {
+      this.closeCancelModal()
+      await this.refreshData()
+      this.$toast.success('Reserva cancelada exitosamente')
+    },
+    
     // Métodos de filtrado
     filterByStatus(status) {
       this.filters.status = status
@@ -600,7 +660,7 @@ export default {
     
     filterByTodayCheckouts() {
       const today = new Date().toISOString().split('T')[0]
-      this.filters.date_to = today
+      this.filters.check_out_date = today
       this.filters.status = 'checked_in'
       this.applyFilters()
     },
@@ -612,8 +672,8 @@ export default {
     clearFilters() {
       this.filters = {
         status: '',
-        date_from: '',
-        date_to: '',
+        check_in_date: '',
+        check_out_date: '',
         search: ''
       }
       this.expandedReservation = null
@@ -673,13 +733,7 @@ export default {
       }
     },
     
-    // Manejar dropdown manualmente - REMOVIDO ya que no se usa
-    
-    editReservation(reservation) {
-      this.$router.push(`/admin/reservations/${reservation.id}/edit`)
-    },
-    
-    // Métodos de acciones de reserva - SIMPLIFICADOS
+    // Métodos de confirmación de pago
     async confirmPayment(reservation) {
       if (!confirm('¿Confirmar el pago de esta reserva?')) return
       
@@ -690,24 +744,11 @@ export default {
             notes: 'Pago confirmado por administrador'
           })
           await this.refreshData()
-          alert('Pago confirmado exitosamente')
+          this.$toast.success('Pago confirmado exitosamente')
         }
       } catch (error) {
         console.error('Error confirmando pago:', error)
-        alert('Error al confirmar el pago')
-      }
-    },
-    
-    async cancelReservation(reservation) {
-      if (!confirm('¿Está seguro de cancelar esta reserva? Esta acción no se puede deshacer.')) return
-      
-      try {
-        await adminApi.cancelReservation(reservation.id)
-        await this.refreshData()
-        alert('Reserva cancelada exitosamente')
-      } catch (error) {
-        console.error('Error cancelando reserva:', error)
-        alert('Error al cancelar la reserva')
+        this.$toast.error('Error al confirmar el pago')
       }
     },
     
@@ -720,19 +761,29 @@ export default {
         apiHelpers.downloadBlob(blob, `reservas_${new Date().toISOString().split('T')[0]}.xlsx`)
       } catch (error) {
         console.error('Error exportando reservas:', error)
-        alert('Error al exportar las reservas. Por favor, inténtalo de nuevo.')
+        this.$toast.error('Error al exportar las reservas')
       }
     },
     
-    printReservation(reservation) {
-      // Abrir modal de detalles para imprimir
-      this.expandedReservation = reservation.id
-      setTimeout(() => {
-        window.print()
-      }, 500)
+    // Métodos de validación
+    canCheckIn(reservation) {
+      // Puede hacer check-in si está confirmada y es hoy o después de la fecha
+      if (reservation.status !== 'confirmed') return false
+      
+      const today = new Date()
+      const checkInDate = new Date(reservation.check_in_date)
+      
+      // Permitir check-in desde el día anterior
+      const yesterday = new Date(today)
+      yesterday.setDate(yesterday.getDate() - 1)
+      
+      return checkInDate >= yesterday
     },
     
-    // Métodos de validación - SIMPLIFICADOS
+    canCheckOut(reservation) {
+      return reservation.status === 'checked_in'
+    },
+    
     canConfirmPayment(reservation) {
       return reservation.status === 'pending_payment' && 
              reservation.payments?.some(p => p.status === 'pending')
@@ -796,54 +847,33 @@ export default {
     // Métodos de estado y badges
     getStatusBadgeClass(status) {
       const classes = {
-        'pending': 'badge bg-warning text-dark',
+        'pending_payment': 'badge bg-warning text-dark',
         'confirmed': 'badge bg-success',
         'checked_in': 'badge bg-primary',
-        'checked_out': 'badge bg-info',
-        'cancelled': 'badge bg-danger',
-        'pending_payment': 'badge bg-warning text-dark'
+        'completed': 'badge bg-info',
+        'cancelled': 'badge bg-danger'
       }
       return classes[status] || 'badge bg-secondary'
     },
     
     getStatusIcon(status) {
       const icons = {
-        'pending': 'fas fa-clock',
+        'pending_payment': 'fas fa-hourglass-half',
         'confirmed': 'fas fa-check-circle',
         'checked_in': 'fas fa-sign-in-alt',
-        'checked_out': 'fas fa-sign-out-alt',
-        'cancelled': 'fas fa-times-circle',
-        'pending_payment': 'fas fa-hourglass-half'
+        'completed': 'fas fa-check-double',
+        'cancelled': 'fas fa-times-circle'
       }
       return icons[status] || 'fas fa-question-circle'
     },
     
     getStatusText(status) {
       const texts = {
-        'pending': 'Pendiente',
+        'pending_payment': 'Pago Pendiente',
         'confirmed': 'Confirmada',
         'checked_in': 'Check-in',
-        'checked_out': 'Check-out',
-        'cancelled': 'Cancelada',
-        'pending_payment': 'Pago Pendiente'
-      }
-      return texts[status] || 'Desconocido'
-    },
-    
-    getPaymentStatusBadgeClass(status) {
-      const classes = {
-        'pending': 'badge bg-warning text-dark',
-        'verified': 'badge bg-success',
-        'rejected': 'badge bg-danger'
-      }
-      return classes[status] || 'badge bg-secondary'
-    },
-    
-    getPaymentStatusText(status) {
-      const texts = {
-        'pending': 'Pendiente',
-        'verified': 'Verificado',
-        'rejected': 'Rechazado'
+        'completed': 'Completada',
+        'cancelled': 'Cancelada'
       }
       return texts[status] || 'Desconocido'
     },
@@ -871,6 +901,7 @@ export default {
 </script>
 
 <style scoped>
+/* Mantenemos los estilos existentes del componente original */
 .admin-reservations {
   background-color: #f8f9fa;
   min-height: calc(100vh - 80px);
@@ -1042,7 +1073,6 @@ export default {
   color: #28a745;
 }
 
-/* Estilos mejorados para las acciones */
 .actions-container {
   display: flex;
   justify-content: flex-end;
@@ -1080,11 +1110,6 @@ export default {
   color: white;
 }
 
-.btn-outline-info.active {
-  background-color: #17a2b8;
-  border-color: #17a2b8;
-}
-
 .reservation-expanded {
   border-top: 1px solid #e9ecef;
   padding-top: 1rem;
@@ -1106,67 +1131,11 @@ export default {
   padding: 0.25rem 0;
 }
 
-.cost-breakdown {
+.registration-info {
   background: white;
   border: 1px solid #dee2e6;
   border-radius: 8px;
   padding: 1rem;
-}
-
-.cost-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.5rem 0;
-  border-bottom: 1px solid #f1f3f4;
-}
-
-.cost-item:last-child {
-  border-bottom: none;
-}
-
-.cost-amount {
-  font-weight: 600;
-  color: #495057;
-}
-
-.cost-total {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem;
-  background: #f8f9fa;
-  border-radius: 8px;
-  font-size: 1.1rem;
-  font-weight: 700;
-}
-
-.total-amount {
-  color: #28a745;
-  font-size: 1.3rem;
-}
-
-.payments-status {
-  background: white;
-  border: 1px solid #dee2e6;
-  border-radius: 8px;
-  padding: 1rem;
-}
-
-.payment-item {
-  padding: 0.75rem;
-  border: 1px solid #e9ecef;
-  border-radius: 8px;
-  margin-bottom: 0.5rem;
-}
-
-.payment-item:last-child {
-  margin-bottom: 0;
-}
-
-.payment-amount {
-  font-weight: 600;
-  color: #495057;
 }
 
 .badge {
@@ -1185,58 +1154,6 @@ export default {
 .pagination .page-item.active .page-link {
   background-color: #007bff;
   border-color: #007bff;
-}
-
-/* Dropdown estilos */
-.dropdown {
-  position: relative;
-}
-
-.dropdown-menu {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  z-index: 1000;
-  display: none;
-  min-width: 180px;
-  padding: 0.5rem 0;
-  margin: 0.125rem 0 0;
-  font-size: 0.875rem;
-  background-color: #fff;
-  border: 1px solid rgba(0, 0, 0, 0.15);
-  border-radius: 0.5rem;
-  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-}
-
-.dropdown-menu.show {
-  display: block;
-}
-
-.dropdown-item {
-  display: block;
-  width: 100%;
-  padding: 0.5rem 1rem;
-  clear: both;
-  font-weight: 400;
-  color: #212529;
-  text-align: inherit;
-  text-decoration: none;
-  white-space: nowrap;
-  background-color: transparent;
-  border: 0;
-  cursor: pointer;
-  transition: all 0.15s ease-in-out;
-}
-
-.dropdown-item:hover {
-  background-color: #f8f9fa;
-}
-
-.dropdown-divider {
-  height: 0;
-  margin: 0.5rem 0;
-  overflow: hidden;
-  border-top: 1px solid rgba(0, 0, 0, 0.15);
 }
 
 @media (max-width: 768px) {

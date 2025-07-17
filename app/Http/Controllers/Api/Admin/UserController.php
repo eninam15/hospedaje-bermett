@@ -49,40 +49,50 @@ class UserController extends Controller
     
     public function store(Request $request)
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:6|confirmed',
-            'phone' => 'required|string|max:20',
-            'document_type' => 'required|in:ci,passport,other',
-            'document_number' => 'required|string|max:50',
-            'birth_date' => 'nullable|date',
-            'address' => 'nullable|string|max:500',
-            'role' => 'required|exists:roles,name',
-            'is_active' => 'boolean'
-        ]);
-        
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'phone' => $request->phone,
-            'document_type' => $request->document_type,
-            'document_number' => $request->document_number,
-            'birth_date' => $request->birth_date,
-            'address' => $request->address,
-            'is_active' => $request->is_active ?? true,
-            'email_verified_at' => now()
-        ]);
-        
-        $user->assignRole($request->role);
-        
-        return response()->json([
-            'message' => 'Usuario creado exitosamente',
-            'user' => $user->load('roles')
-        ], 201);
+        try {
+            $request->validate([
+                'name' => 'required|string|max:255',
+                'email' => 'required|string|email|max:255|unique:users',
+                'password' => 'required|string|min:6|confirmed',
+                'phone' => 'nullable|string|max:20',
+                'document_type' => 'required|in:ci,passport,license,other',
+                'document_number' => 'required|string|max:50',
+                'birth_date' => 'nullable|date',
+                'address' => 'nullable|string|max:500',
+                'role' => 'required|exists:roles,name',
+                'is_active' => 'boolean'
+            ]);
+            
+            $user = User::create([
+                'name' => $request->name,
+                'email' => $request->email,
+                'password' => Hash::make($request->password),
+                'phone' => $request->phone,
+                'document_type' => $request->document_type,
+                'document_number' => $request->document_number,
+                'birth_date' => $request->birth_date,
+                'address' => $request->address,
+                'is_active' => $request->is_active ?? true,
+                'email_verified_at' => now()
+            ]);
+            
+            $user->assignRole($request->role);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Usuario creado exitosamente',
+                'data' => $user->load('roles')
+            ], 201);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al crear el usuario',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
-    
+        
     public function show($id)
     {
         $user = User::with(['roles', 'reservations', 'registrations'])

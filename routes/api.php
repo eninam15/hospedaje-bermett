@@ -23,17 +23,34 @@ use App\Http\Controllers\Api\Admin\ServiceController;
 |--------------------------------------------------------------------------
 */
 
-// Rutas de autenticación
-Route::prefix('auth')->group(function () {
-    Route::post('register', [AuthController::class, 'register']);
-    Route::post('login', [AuthController::class, 'login']);
-    Route::post('logout', [AuthController::class, 'logout']);
-    Route::get('user', [AuthController::class, 'user']);
-    Route::put('profile', [AuthController::class, 'updateProfile']);
-    Route::put('change-password', [AuthController::class, 'changePassword']);
+Route::middleware('auth:sanctum')->get('debug-auth', function (Request $request) {
+    return response()->json([
+        'message' => 'Authenticated successfully',
+        'user' => $request->user(),
+        'user_id' => $request->user()->id,
+        'user_name' => $request->user()->name,
+    ]);
 });
 
-// Rutas públicas
+// Agrega esta ruta temporal fuera de cualquier middleware
+Route::get('debug-sanctum', [CustomerReservationController::class, 'debugSanctum']);
+
+// Rutas de autenticación
+Route::prefix('auth')->group(function () {
+    // Rutas públicas de autenticación
+    Route::post('register', [AuthController::class, 'register']);
+    Route::post('login', [AuthController::class, 'login']);
+    
+    // Rutas protegidas de autenticación
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::post('logout', [AuthController::class, 'logout']);
+        Route::get('user', [AuthController::class, 'user']);
+        Route::put('profile', [AuthController::class, 'updateProfile']);
+        Route::put('change-password', [AuthController::class, 'changePassword']);
+    });
+});
+
+// Rutas públicas (sin autenticación)
 Route::prefix('public')->group(function () {
     Route::get('branches', [BranchController::class, 'index']);
     Route::get('branches/{id}', [BranchController::class, 'show']);
@@ -43,8 +60,8 @@ Route::prefix('public')->group(function () {
     Route::post('rooms/check-availability', [AvailabilityController::class, 'checkAvailability']);
 });
 
-// Rutas de cliente
-Route::prefix('customer')->group(function () {
+// Rutas de cliente (requieren autenticación)
+Route::prefix('customer')->middleware('auth:sanctum')->group(function () {
     Route::get('reservations', [CustomerReservationController::class, 'index']);
     Route::post('reservations', [CustomerReservationController::class, 'store']);
     Route::get('reservations/{id}', [CustomerReservationController::class, 'show']);
@@ -54,8 +71,12 @@ Route::prefix('customer')->group(function () {
     Route::get('payments/reservation/{id}', [CustomerPaymentController::class, 'getPaymentsByReservation']);
 });
 
-// Rutas de administrador
-Route::prefix('admin')->group(function () {
+// Rutas de administrador (requieren autenticación + rol admin)
+// Solución temporal: Remover el middleware role y verificar manualmente
+
+// Usar el middleware role de Spatie que ya configuramos
+
+Route::prefix('admin')->middleware(['auth:sanctum', 'role:admin'])->group(function () {
     // Dashboard
     Route::get('dashboard/stats', [DashboardController::class, 'getStats']);
     
@@ -113,6 +134,7 @@ Route::prefix('admin')->group(function () {
     Route::post('registrations/direct', [AdminRegistrationController::class, 'storeDirect']);
     Route::get('registrations/{id}', [AdminRegistrationController::class, 'show']);
     Route::put('registrations/{id}', [AdminRegistrationController::class, 'update']);
+    Route::post('registrations/{id}/check-out', [AdminRegistrationController::class, 'checkOut']); // NUEVA RUTA
     Route::get('registrations/stats/summary', [AdminRegistrationController::class, 'getStats']);
     
     // Reportes
@@ -126,9 +148,8 @@ Route::prefix('admin')->group(function () {
     Route::get('reports/payments', [ReportController::class, 'payments']);
     Route::post('reports/export', [ReportController::class, 'export']);
 });
-
-// Rutas de empleado
-Route::prefix('employee')->group(function () {
+// Rutas de empleado (requieren autenticación + rol employee)
+Route::prefix('employee')->middleware(['auth:sanctum', 'role:employee'])->group(function () {
     // Gestión de reservas (limitada)
     Route::get('reservations', [AdminReservationController::class, 'index']);
     Route::get('reservations/{id}', [AdminReservationController::class, 'show']);
@@ -146,8 +167,8 @@ Route::prefix('employee')->group(function () {
     Route::get('payments/pending', [AdminPaymentController::class, 'pending']);
 });
 
-// Rutas compartidas entre admin y employee
-Route::prefix('shared')->group(function () {
+// Rutas compartidas entre admin y employee (requieren autenticación)
+Route::prefix('shared')->middleware(['auth:sanctum', 'role:admin|employee'])->group(function () {
     // Consumo de servicios
     Route::get('service-consumptions', [ServiceController::class, 'getConsumptions']);
     Route::post('service-consumptions', [ServiceController::class, 'storeConsumption']);

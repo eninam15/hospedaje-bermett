@@ -121,12 +121,6 @@ const routes = [
     meta: { requiresAuth: true, role: 'admin' }
   },
   {
-    path: '/admin/reservations/:id',
-    name: 'admin.reservation.details',
-    component: () => import('../views/admin/ReservationDetailsView.vue'),
-    meta: { requiresAuth: true, role: 'admin' }
-  },
-  {
     path: '/admin/payments',
     name: 'admin.payments',
     component: AdminPayments,

@@ -235,22 +235,26 @@ export const adminApi = {
     return axios.put(`/admin/reservations/${id}`, reservationData)
   },
   
+ // Método para check-in
   checkInReservation(id, checkInData) {
     return axios.post(`/admin/reservations/${id}/check-in`, checkInData)
   },
-  
+
+  // Método para check-out  
   checkOutReservation(id, checkOutData) {
     return axios.post(`/admin/reservations/${id}/check-out`, checkOutData)
   },
-  
-  cancelReservation(id) {
-    return axios.put(`/admin/reservations/${id}/cancel`)
+
+  // Método para cancelar reserva - ACTUALIZADO
+  cancelReservation(id, cancellationData = {}) {
+    return axios.put(`/admin/reservations/${id}/cancel`, cancellationData)
   },
-  
-  getReservationStats() {
-    return axios.get('/admin/reservations/stats/summary')
+
+  // Estadísticas de reservas
+  getReservationStats(params = {}) {
+    return axios.get('/admin/reservations/stats/summary', { params })
   },
-  
+    
   // Pagos
   getPayments(params = {}) {
     return axios.get('/admin/payments', { params })
@@ -276,21 +280,27 @@ export const adminApi = {
   getRegistrations(params = {}) {
     return axios.get('/admin/registrations', { params })
   },
-  
-  createDirectRegistration(registrationData) {
-    return axios.post('/admin/registrations/direct', registrationData)
-  },
-  
+
   getRegistration(id) {
     return axios.get(`/admin/registrations/${id}`)
   },
-  
+
+  createDirectRegistration(registrationData) {
+    return axios.post('/admin/registrations/direct', registrationData)
+  },
+
   updateRegistration(id, registrationData) {
     return axios.put(`/admin/registrations/${id}`, registrationData)
   },
-  
-  getRegistrationStats() {
-    return axios.get('/admin/registrations/stats/summary')
+
+  // Método para check-out desde registros
+  checkOutRegistration(id, checkOutData) {
+    return axios.post(`/admin/registrations/${id}/check-out`, checkOutData)
+  },
+
+  // Estadísticas de registros
+  getRegistrationStats(params = {}) {
+    return axios.get('/admin/registrations/stats/summary', { params })
   },
   
   // Reportes

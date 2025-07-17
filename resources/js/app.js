@@ -10,22 +10,33 @@ import './bootstrap'
 import App from './App.vue'
 import routes from './router/index.js'
 import ToastPlugin from './plugins/toast.js'
+import { useAuthStore } from './stores/auth'
 
-
-// Crear instancias
+// Crear app y configurar plugins
 const app = createApp(App)
 const pinia = createPinia()
+app.use(pinia)
+
 const router = createRouter({
-    history: createWebHistory(),
-    routes
+  history: createWebHistory(),
+  routes
 })
 
-// Configurar
-app.use(pinia)
 app.use(router)
 app.use(PrimeVue)
 app.use(ToastPlugin)
 
+// Inicializar autenticación antes de montar
+const initApp = async () => {
+  const auth = useAuthStore()
+  
+  try {
+    await auth.checkAuth()
+  } catch (error) {
+    console.error('Error al inicializar autenticación:', error)
+  } finally {
+    app.mount('#app')
+  }
+}
 
-// Montar aplicación
-app.mount('#app')
+initApp()

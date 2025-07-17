@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -77,7 +78,15 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
-        $request->user()->currentAccessToken()->delete();
+        $user = $request->user();
+        
+        if (!$user) {
+            return response()->json([
+                'message' => 'No hay usuario autenticado'
+            ], 401);
+        }
+
+        $user->currentAccessToken()->delete();
 
         return response()->json([
             'message' => 'Sesión cerrada exitosamente'
@@ -86,13 +95,34 @@ class AuthController extends Controller
 
     public function user(Request $request)
     {
+        $user = $request->user();
+        
+        if (!$user) {
+            return response()->json([
+                'message' => 'Usuario no autenticado',
+                'debug' => [
+                    'has_auth_header' => $request->hasHeader('Authorization'),
+                    'bearer_token' => $request->bearerToken() ? 'present' : 'missing',
+                    'middleware' => $request->route()->middleware(),
+                ]
+            ], 401);
+        }
+
         return response()->json([
-            'user' => $request->user()->load('roles')
+            'user' => $user->load('roles')
         ]);
     }
 
     public function updateProfile(Request $request)
     {
+        $user = $request->user();
+        
+        if (!$user) {
+            return response()->json([
+                'message' => 'Usuario no autenticado'
+            ], 401);
+        }
+
         $request->validate([
             'name' => 'required|string|max:255',
             'phone' => 'required|string|max:20',
@@ -101,7 +131,6 @@ class AuthController extends Controller
             'address' => 'nullable|string|max:500',
         ]);
 
-        $user = $request->user();
         $user->update($request->only([
             'name', 'phone', 'document_type', 'document_number', 'address'
         ]));
@@ -114,12 +143,18 @@ class AuthController extends Controller
 
     public function changePassword(Request $request)
     {
+        $user = $request->user();
+        
+        if (!$user) {
+            return response()->json([
+                'message' => 'Usuario no autenticado'
+            ], 401);
+        }
+
         $request->validate([
             'current_password' => 'required',
             'password' => 'required|string|min:6|confirmed',
         ]);
-
-        $user = $request->user();
 
         if (!Hash::check($request->current_password, $user->password)) {
             throw ValidationException::withMessages([

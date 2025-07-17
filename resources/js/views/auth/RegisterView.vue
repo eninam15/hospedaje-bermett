@@ -10,6 +10,11 @@
                 <p class="text-muted">Crear Cuenta</p>
               </div>
 
+              <!-- Mostrar mensaje de error general -->
+              <div v-if="generalError" class="alert alert-danger" role="alert">
+                {{ generalError }}
+              </div>
+
               <form @submit.prevent="handleRegister">
                 <div class="row">
                   <div class="col-md-6 mb-3">
@@ -23,7 +28,7 @@
                       required
                     >
                     <div v-if="errors.name" class="invalid-feedback">
-                      {{ errors.name[0] }}
+                      {{ Array.isArray(errors.name) ? errors.name[0] : errors.name }}
                     </div>
                   </div>
 
@@ -38,7 +43,7 @@
                       required
                     >
                     <div v-if="errors.email" class="invalid-feedback">
-                      {{ errors.email[0] }}
+                      {{ Array.isArray(errors.email) ? errors.email[0] : errors.email }}
                     </div>
                   </div>
                 </div>
@@ -53,9 +58,10 @@
                       id="password"
                       :class="{ 'is-invalid': errors.password }"
                       required
+                      minlength="6"
                     >
                     <div v-if="errors.password" class="invalid-feedback">
-                      {{ errors.password[0] }}
+                      {{ Array.isArray(errors.password) ? errors.password[0] : errors.password }}
                     </div>
                   </div>
 
@@ -66,8 +72,13 @@
                       type="password" 
                       class="form-control" 
                       id="password_confirmation"
+                      :class="{ 'is-invalid': passwordMismatch }"
                       required
+                      minlength="6"
                     >
+                    <div v-if="passwordMismatch" class="invalid-feedback">
+                      Las contraseñas no coinciden
+                    </div>
                   </div>
                 </div>
 
@@ -84,7 +95,7 @@
                       required
                     >
                     <div v-if="errors.phone" class="invalid-feedback">
-                      {{ errors.phone[0] }}
+                      {{ Array.isArray(errors.phone) ? errors.phone[0] : errors.phone }}
                     </div>
                   </div>
 
@@ -103,7 +114,7 @@
                       <option value="other">Otro</option>
                     </select>
                     <div v-if="errors.document_type" class="invalid-feedback">
-                      {{ errors.document_type[0] }}
+                      {{ Array.isArray(errors.document_type) ? errors.document_type[0] : errors.document_type }}
                     </div>
                   </div>
                 </div>
@@ -119,12 +130,12 @@
                     required
                   >
                   <div v-if="errors.document_number" class="invalid-feedback">
-                    {{ errors.document_number[0] }}
+                    {{ Array.isArray(errors.document_number) ? errors.document_number[0] : errors.document_number }}
                   </div>
                 </div>
 
                 <div class="mb-3">
-                  <label for="address" class="form-label">Dirección</label>
+                  <label for="address" class="form-label">Dirección (Opcional)</label>
                   <textarea 
                     v-model="form.address" 
                     class="form-control" 
@@ -134,21 +145,27 @@
                     placeholder="Dirección completa"
                   ></textarea>
                   <div v-if="errors.address" class="invalid-feedback">
-                    {{ errors.address[0] }}
+                    {{ Array.isArray(errors.address) ? errors.address[0] : errors.address }}
                   </div>
                 </div>
 
                 <div class="mb-3 form-check">
-                  <input v-model="form.accept_terms" type="checkbox" class="form-check-input" id="accept_terms" required>
+                  <input 
+                    v-model="form.accept_terms" 
+                    type="checkbox" 
+                    class="form-check-input" 
+                    id="accept_terms" 
+                    required
+                  >
                   <label class="form-check-label" for="accept_terms">
-                    Acepto los <a href="#" class="text-primary">términos y condiciones</a>
+                    Acepto los términos y condiciones
                   </label>
                 </div>
 
                 <button 
                   type="submit" 
                   class="btn btn-primary w-100"
-                  :disabled="loading"
+                  :disabled="loading || !isFormValid"
                 >
                   <span v-if="loading" class="spinner-border spinner-border-sm me-2"></span>
                   {{ loading ? 'Registrando...' : 'Crear Cuenta' }}
@@ -170,9 +187,10 @@
 </template>
 
 <script>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/auth.js'
+import { authApi } from '../../services/api.js'
 
 export default {
   name: 'RegisterView',
@@ -193,24 +211,75 @@ export default {
     })
     
     const errors = ref({})
+    const generalError = ref('')
     const loading = ref(false)
+
+    // Validaciones computadas
+    const passwordMismatch = computed(() => {
+      return form.value.password && form.value.password_confirmation && 
+             form.value.password !== form.value.password_confirmation
+    })
+
+    const isFormValid = computed(() => {
+      return form.value.name && 
+             form.value.email && 
+             form.value.password && 
+             form.value.password_confirmation &&
+             form.value.phone &&
+             form.value.document_type &&
+             form.value.document_number &&
+             form.value.accept_terms &&
+             !passwordMismatch.value
+    })
 
     const handleRegister = async () => {
       try {
         loading.value = true
         errors.value = {}
+        generalError.value = ''
         
-        await authStore.register(form.value)
+        console.log('Enviando datos de registro:', form.value)
         
-        // Redirigir al dashboard del cliente
-        router.push('/customer')
-      } catch (error) {
-        if (error.response?.data?.errors) {
-          errors.value = error.response.data.errors
+        // Opción 1: Usar el store
+        if (authStore && typeof authStore.register === 'function') {
+          console.log('Usando authStore.register')
+          await authStore.register(form.value)
         } else {
-          errors.value = { 
-            name: [error.response?.data?.message || 'Error al crear cuenta'] 
+          // Opción 2: Usar directamente la API
+          console.log('Usando authApi.register directamente')
+          const response = await authApi.register(form.value)
+          
+          if (response.data.token) {
+            // Guardar token manualmente si el store no funciona
+            localStorage.setItem('auth_token', response.data.token)
+            localStorage.setItem('auth_user', JSON.stringify(response.data.user))
           }
+        }
+        
+        console.log('Registro exitoso, redirigiendo...')
+        
+        // Redirigir al dashboard del cliente o home
+        router.push('/customer').catch(() => {
+          // Si la ruta no existe, ir a home
+          router.push('/')
+        })
+        
+      } catch (error) {
+        console.error('Error en registro:', error)
+        
+        if (error.response?.data?.errors) {
+          // Errores de validación del servidor
+          errors.value = error.response.data.errors
+          console.log('Errores de validación:', errors.value)
+        } else if (error.response?.data?.message) {
+          // Mensaje de error del servidor
+          generalError.value = error.response.data.message
+        } else if (error.message) {
+          // Error de red o JavaScript
+          generalError.value = error.message
+        } else {
+          // Error desconocido
+          generalError.value = 'Error desconocido al crear la cuenta'
         }
       } finally {
         loading.value = false
@@ -220,7 +289,10 @@ export default {
     return {
       form,
       errors,
+      generalError,
       loading,
+      passwordMismatch,
+      isFormValid,
       handleRegister
     }
   }
@@ -247,6 +319,11 @@ export default {
   border-color: #0056b3;
 }
 
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .text-primary {
   color: #007bff !important;
 }
@@ -260,5 +337,9 @@ export default {
 .form-check-input:checked {
   background-color: #007bff;
   border-color: #007bff;
+}
+
+.alert {
+  border-radius: 0.375rem;
 }
 </style>

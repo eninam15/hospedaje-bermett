@@ -3,7 +3,7 @@
     <div class="row">
       <div class="col-12">
         <div class="d-flex justify-content-between align-items-center mb-4">
-          <h2>Mis Reservas</h2>
+          <h2>Mis Reservas ccc</h2>
           <router-link to="/search" class="btn btn-success">
             <i class="pi pi-plus"></i> Nueva Reserva
           </router-link>
