@@ -9,6 +9,8 @@ import './bootstrap'
 
 import App from './App.vue'
 import routes from './router/index.js'
+import ToastPlugin from './plugins/toast.js'
+
 
 // Crear instancias
 const app = createApp(App)
@@ -22,6 +24,8 @@ const router = createRouter({
 app.use(pinia)
 app.use(router)
 app.use(PrimeVue)
+app.use(ToastPlugin)
+
 
 // Montar aplicación
 app.mount('#app')

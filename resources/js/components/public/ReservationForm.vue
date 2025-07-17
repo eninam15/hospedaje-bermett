@@ -1,147 +1,511 @@
 <template>
-  <div>
-    <!-- Información de la habitación -->
-    <div class="card mb-4">
-      <div class="card-body">
-        <h6 class="card-title">{{ room.room_type.name }} - Habitación {{ room.room_number }}</h6>
-        <p class="text-muted mb-2">{{ room.branch.name }}</p>
-        <p class="mb-0">{{ room.description }}</p>
+  <div class="reservation-form">
+    <!-- Room Information Card -->
+    <div class="room-info-card mb-4">
+      <div class="card border-0">
+        <div class="card-body p-0">
+          <div class="row align-items-center">
+            <div class="col-md-4">
+              <div class="room-image-preview">
+                <img 
+                  :src="getRoomImage(room)" 
+                  :alt="'Habitación ' + room.room_number"
+                  class="img-fluid rounded"
+                />
+              </div>
+            </div>
+            <div class="col-md-8">
+              <div class="room-details">
+                <h5 class="room-title mb-2">
+                  <i class="fas fa-door-open text-primary me-2"></i>
+                  {{ room.room_type.name }} - Habitación {{ room.room_number }}
+                </h5>
+                <p class="room-branch text-muted mb-2">
+                  <i class="fas fa-map-marker-alt me-1"></i>
+                  {{ room.branch.name }}
+                </p>
+                <p class="room-description mb-2">{{ room.description }}</p>
+                <div class="room-capacity">
+                  <span class="badge bg-light text-dark me-2">
+                    <i class="fas fa-users me-1"></i>
+                    Hasta {{ room.room_type.max_guests }} huéspedes
+                  </span>
+                  <span class="badge bg-light text-dark">
+                    <i class="fas fa-star text-warning me-1"></i>
+                    {{ room.branch.category }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
-    <!-- Formulario de reserva -->
-    <form @submit.prevent="handleReservation">
-      <div class="row mb-3">
-        <div class="col-md-6">
-          <label class="form-label">Check-in</label>
-          <input v-model="form.check_in_date" type="date" class="form-control" readonly>
-        </div>
-        <div class="col-md-6">
-          <label class="form-label">Check-out</label>
-          <input v-model="form.check_out_date" type="date" class="form-control" readonly>
-        </div>
-      </div>
-
-      <div class="row mb-3">
-        <div class="col-md-6">
-          <label class="form-label">Adultos</label>
-          <select v-model="form.adults_count" class="form-select" required>
-            <option v-for="n in room.room_type.max_adults" :key="n" :value="n">{{ n }}</option>
-          </select>
-        </div>
-        <div class="col-md-6">
-          <label class="form-label">Niños</label>
-          <select v-model="form.children_count" class="form-select">
-            <option v-for="n in room.room_type.max_children + 1" :key="n-1" :value="n-1">{{ n-1 }}</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="mb-3">
-        <div class="form-check">
-          <input 
-            v-model="form.needs_parking" 
-            class="form-check-input" 
-            type="checkbox" 
-            id="needs_parking"
-          >
-          <label class="form-check-label" for="needs_parking">
-            Necesito estacionamiento (+Bs. 15 por noche)
-          </label>
-        </div>
-      </div>
-
-      <div class="mb-3">
-        <label class="form-label">Método de Pago</label>
-        <div class="form-check">
-          <input 
-            v-model="form.payment_method" 
-            class="form-check-input" 
-            type="radio" 
-            id="payment_qr" 
-            value="qr"
-          >
-          <label class="form-check-label" for="payment_qr">
-            QR (Yape/Transferencia) - Pago inmediato
-          </label>
-        </div>
-        <div class="form-check">
-          <input 
-            v-model="form.payment_method" 
-            class="form-check-input" 
-            type="radio" 
-            id="payment_cash" 
-            value="cash"
-          >
-          <label class="form-check-label" for="payment_cash">
-            Efectivo - Pago en el hospedaje
-          </label>
-        </div>
-      </div>
-
-      <div class="mb-3">
-        <label class="form-label">Solicitudes especiales (opcional)</label>
-        <textarea 
-          v-model="form.special_requests" 
-          class="form-control" 
-          rows="3"
-          placeholder="Cualquier solicitud especial..."
-        ></textarea>
-      </div>
-
-      <!-- Resumen de costos -->
-      <div class="card mb-4">
-        <div class="card-body">
-          <h6 class="card-title">Resumen de Costos</h6>
-          <div class="d-flex justify-content-between">
-            <span>Habitación ({{ searchParams.total_nights }} noche{{ searchParams.total_nights > 1 ? 's' : '' }}):</span>
-            <span>{{ room.formatted_room_total }}</span>
+    <!-- Reservation Form -->
+    <form @submit.prevent="handleReservation" class="reservation-form-content">
+      <!-- Dates Section -->
+      <div class="form-section mb-4">
+        <h6 class="section-title">
+          <i class="fas fa-calendar-alt text-primary me-2"></i>
+          Fechas de Estadía
+        </h6>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">
+              <i class="fas fa-calendar-check me-1"></i>
+              Check-in
+            </label>
+            <input 
+              v-model="form.check_in_date" 
+              type="date" 
+              class="form-control"
+              :class="{ 'is-invalid': errors.check_in_date }"
+              :min="minDate"
+              @change="updateStayDuration"
+              required
+            >
+            <div v-if="errors.check_in_date" class="invalid-feedback">
+              {{ errors.check_in_date }}
+            </div>
           </div>
-          <div v-if="form.needs_parking" class="d-flex justify-content-between">
-            <span>Estacionamiento:</span>
-            <span>Bs. {{ parkingTotal }}</span>
-          </div>
-          <hr>
-          <div class="d-flex justify-content-between fw-bold">
-            <span>Total:</span>
-            <span class="text-success">Bs. {{ grandTotal }}</span>
+          <div class="col-md-6">
+            <label class="form-label">
+              <i class="fas fa-calendar-times me-1"></i>
+              Check-out
+            </label>
+            <input 
+              v-model="form.check_out_date" 
+              type="date" 
+              class="form-control"
+              :class="{ 'is-invalid': errors.check_out_date }"
+              :min="form.check_in_date || minDate"
+              @change="updateStayDuration"
+              required
+            >
+            <div v-if="errors.check_out_date" class="invalid-feedback">
+              {{ errors.check_out_date }}
+            </div>
           </div>
         </div>
+        <div class="stay-duration mt-2">
+          <small class="text-muted">
+            <i class="fas fa-moon me-1"></i>
+            Duración de estadía: <strong>{{ calculatedNights }} noche{{ calculatedNights > 1 ? 's' : '' }}</strong>
+          </small>
+        </div>
       </div>
 
-      <!-- Información de pago QR -->
-      <div v-if="form.payment_method === 'qr'" class="alert alert-info">
-        <h6>Información de Pago QR</h6>
-        <p class="mb-0">{{ room.branch.qr_payment_info }}</p>
-        <small class="text-muted">
-          Después de realizar la reserva, podrás subir el comprobante de pago.
-        </small>
+      <!-- Guests Section -->
+      <div class="form-section mb-4">
+        <h6 class="section-title">
+          <i class="fas fa-users text-primary me-2"></i>
+          Huéspedes
+        </h6>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">
+              <i class="fas fa-user me-1"></i>
+              Adultos
+            </label>
+            <select 
+              v-model="form.adults_count" 
+              class="form-select"
+              :class="{ 'is-invalid': errors.adults_count }"
+              required
+            >
+              <option v-for="n in room.room_type.max_adults" :key="n" :value="n">
+                {{ n }} adulto{{ n > 1 ? 's' : '' }}
+              </option>
+            </select>
+            <div v-if="errors.adults_count" class="invalid-feedback">
+              {{ errors.adults_count }}
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">
+              <i class="fas fa-child me-1"></i>
+              Niños
+            </label>
+            <select 
+              v-model="form.children_count" 
+              class="form-select"
+              :class="{ 'is-invalid': errors.children_count }"
+            >
+              <option v-for="n in (room.room_type.max_children || 0) + 1" :key="n-1" :value="n-1">
+                {{ n-1 }} niño{{ (n-1) !== 1 ? 's' : '' }}
+              </option>
+            </select>
+            <div v-if="errors.children_count" class="invalid-feedback">
+              {{ errors.children_count }}
+            </div>
+          </div>
+        </div>
+        <div class="guest-capacity-info mt-2">
+          <div class="alert alert-info py-2">
+            <small>
+              <i class="fas fa-info-circle me-1"></i>
+              Esta habitación puede alojar hasta {{ room.room_type.max_guests }} huéspedes
+              ({{ room.room_type.max_adults }} adultos{{ room.room_type.max_children > 0 ? `, ${room.room_type.max_children} niños` : '' }})
+            </small>
+          </div>
+        </div>
       </div>
 
-      <!-- Botones -->
-      <div class="d-flex justify-content-end gap-2">
-        <button type="button" class="btn btn-secondary" @click="$emit('cancel')">
-          Cancelar
-        </button>
-        <button type="submit" class="btn btn-success" :disabled="loading || !isAuthenticated">
-          <span v-if="loading" class="spinner-border spinner-border-sm me-2"></span>
-          {{ loading ? 'Reservando...' : 'Confirmar Reserva' }}
-        </button>
+      <!-- Services Section -->
+      <div class="form-section mb-4">
+        <h6 class="section-title">
+          <i class="fas fa-concierge-bell text-primary me-2"></i>
+          Servicios Adicionales
+        </h6>
+        <div class="services-options">
+          <div class="service-option">
+            <div class="form-check form-check-card">
+              <input 
+                v-model="form.needs_parking" 
+                class="form-check-input" 
+                type="checkbox" 
+                id="needs_parking"
+              >
+              <label class="form-check-label" for="needs_parking">
+                <div class="service-card">
+                  <div class="service-icon">
+                    <i class="fas fa-parking text-primary"></i>
+                  </div>
+                  <div class="service-details">
+                    <div class="service-name">Estacionamiento</div>
+                    <div class="service-description">Espacio de estacionamiento seguro</div>
+                  </div>
+                  <div class="service-price">
+                    <span class="price">Bs. 15</span>
+                    <small class="period">por noche</small>
+                  </div>
+                </div>
+              </label>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <!-- Mensaje de login -->
-      <div v-if="!isAuthenticated" class="alert alert-warning mt-3">
-        <i class="pi pi-info-circle"></i>
-        Debes <router-link to="/login">iniciar sesión</router-link> para realizar una reserva.
+      <!-- Payment Method Section -->
+      <div class="form-section mb-4">
+        <h6 class="section-title">
+          <i class="fas fa-credit-card text-primary me-2"></i>
+          Método de Pago
+        </h6>
+        <div class="payment-methods">
+          <div class="payment-option">
+            <div class="form-check form-check-card">
+              <input 
+                v-model="form.payment_method" 
+                class="form-check-input" 
+                type="radio" 
+                id="payment_qr" 
+                value="qr"
+              >
+              <label class="form-check-label" for="payment_qr">
+                <div class="payment-card">
+                  <div class="payment-icon">
+                    <i class="fas fa-qrcode text-success"></i>
+                  </div>
+                  <div class="payment-details">
+                    <div class="payment-name">QR / Transferencia</div>
+                    <div class="payment-description">Pago inmediato con QR o transferencia bancaria</div>
+                  </div>
+                  <div class="payment-badge">
+                    <span class="badge bg-success">Recomendado</span>
+                  </div>
+                </div>
+              </label>
+            </div>
+          </div>
+          <div class="payment-option">
+            <div class="form-check form-check-card">
+              <input 
+                v-model="form.payment_method" 
+                class="form-check-input" 
+                type="radio" 
+                id="payment_cash" 
+                value="cash"
+              >
+              <label class="form-check-label" for="payment_cash">
+                <div class="payment-card">
+                  <div class="payment-icon">
+                    <i class="fas fa-money-bill-wave text-warning"></i>
+                  </div>
+                  <div class="payment-details">
+                    <div class="payment-name">Efectivo</div>
+                    <div class="payment-description">Pago en efectivo al llegar al hospedaje</div>
+                  </div>
+                  <div class="payment-badge">
+                    <span class="badge bg-outline-secondary">Al llegar</span>
+                  </div>
+                </div>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Special Requests Section -->
+      <div class="form-section mb-4">
+        <h6 class="section-title">
+          <i class="fas fa-comment-alt text-primary me-2"></i>
+          Solicitudes Especiales <span class="text-muted">(opcional)</span>
+        </h6>
+        <div class="special-requests">
+          <textarea 
+            v-model="form.special_requests" 
+            class="form-control"
+            :class="{ 'is-invalid': errors.special_requests }"
+            rows="4"
+            placeholder="¿Tienes alguna solicitud especial? Por ejemplo: habitación en piso alto, cama extra, etc."
+            maxlength="500"
+          ></textarea>
+          <div v-if="errors.special_requests" class="invalid-feedback">
+            {{ errors.special_requests }}
+          </div>
+          <div class="form-text">
+            <small class="text-muted">{{ form.special_requests.length }}/500 caracteres</small>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cost Summary Section -->
+      <div class="cost-summary-section mb-4">
+        <div class="card border-0 bg-light">
+          <div class="card-body">
+            <h6 class="card-title mb-3">
+              <i class="fas fa-calculator text-primary me-2"></i>
+              Resumen de Costos
+            </h6>
+            <div class="cost-breakdown">
+              <div class="cost-item d-flex justify-content-between align-items-center">
+                <div class="cost-label">
+                  <i class="fas fa-bed me-2 text-muted"></i>
+                  Habitación {{ room.room_type.name }}
+                  <small class="text-muted d-block">
+                    {{ calculatedNights }} noche{{ calculatedNights > 1 ? 's' : '' }} × {{ room.formatted_price || `Bs. ${room.price_per_night}` }}
+                  </small>
+                </div>
+                <div class="cost-value">
+                  Bs. {{ roomTotal.toFixed(2) }}
+                </div>
+              </div>
+              
+              <div v-if="form.needs_parking" class="cost-item d-flex justify-content-between align-items-center">
+                <div class="cost-label">
+                  <i class="fas fa-parking me-2 text-muted"></i>
+                  Estacionamiento
+                  <small class="text-muted d-block">
+                    {{ calculatedNights }} noche{{ calculatedNights > 1 ? 's' : '' }} × Bs. 15
+                  </small>
+                </div>
+                <div class="cost-value">
+                  Bs. {{ parkingTotal.toFixed(2) }}
+                </div>
+              </div>
+              
+              <hr class="my-3">
+              
+              <div class="cost-total d-flex justify-content-between align-items-center">
+                <div class="total-label">
+                  <strong>
+                    <i class="fas fa-receipt me-2 text-success"></i>
+                    Total a Pagar
+                  </strong>
+                </div>
+                <div class="total-value">
+                  <strong class="text-success fs-5">Bs. {{ grandTotal.toFixed(2) }}</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Payment Information -->
+      <div v-if="form.payment_method === 'qr'" class="payment-info-section mb-4">
+        <div class="alert alert-info border-0">
+          <h6 class="alert-heading">
+            <i class="fas fa-info-circle me-2"></i>
+            Información de Pago QR
+          </h6>
+          <div class="qr-payment-info">
+            <p class="mb-2"><strong>{{ room.branch.qr_payment_info || 'Información de pago QR no disponible' }}</strong></p>
+            <div class="payment-instructions">
+              <small class="text-muted">
+                <strong>Instrucciones:</strong><br>
+                1. Realiza la transferencia por el monto total<br>
+                2. Confirma tu reserva<br>
+                3. Escanea el código QR que aparecerá después<br>
+                4. Sube el comprobante de pago en "Mis Reservas"
+              </small>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Authentication Warning -->
+      <div v-if="!isAuthenticated" class="auth-warning mb-4">
+        <div class="alert alert-warning border-0">
+          <div class="d-flex align-items-center">
+            <i class="fas fa-exclamation-triangle text-warning me-3 fs-4"></i>
+            <div>
+              <h6 class="alert-heading mb-1">Inicia Sesión para Continuar</h6>
+              <p class="mb-2">Necesitas una cuenta para realizar la reserva.</p>
+              <div class="auth-actions">
+                <router-link to="/login" class="btn btn-warning btn-sm me-2">
+                  <i class="fas fa-sign-in-alt me-1"></i>
+                  Iniciar Sesión
+                </router-link>
+                <router-link to="/register" class="btn btn-outline-warning btn-sm">
+                  <i class="fas fa-user-plus me-1"></i>
+                  Crear Cuenta
+                </router-link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Form Actions -->
+      <div class="form-actions">
+        <div class="row">
+          <div class="col-md-6">
+            <button 
+              type="button" 
+              class="btn btn-outline-secondary w-100" 
+              @click="$emit('cancel')"
+            >
+              <i class="fas fa-arrow-left me-2"></i>
+              Volver a Buscar
+            </button>
+          </div>
+          <div class="col-md-6">
+            <button 
+              type="submit" 
+              class="btn btn-success w-100" 
+              :disabled="loading || !isAuthenticated || !isFormValid"
+            >
+              <span v-if="loading">
+                <span class="spinner-border spinner-border-sm me-2"></span>
+                Procesando Reserva...
+              </span>
+              <span v-else>
+                <i class="fas fa-calendar-check me-2"></i>
+                Confirmar Reserva
+              </span>
+            </button>
+          </div>
+        </div>
       </div>
     </form>
+
+    <!-- QR Payment Modal -->
+    <div v-if="showQRModal" class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header bg-primary text-white">
+            <h5 class="modal-title">
+              <i class="fas fa-qrcode me-2"></i>
+              Pago con QR
+            </h5>
+          </div>
+          <div class="modal-body text-center">
+            <div class="qr-section mb-4">
+              <h6 class="mb-3">Escanea el código QR para realizar el pago</h6>
+              <div class="qr-code-container">
+                <div ref="qrCodeRef" id="qrcode"></div>
+              </div>
+              <div class="payment-amount mt-3">
+                <h4 class="text-primary">Monto a pagar: <strong>Bs. {{ grandTotal.toFixed(2) }}</strong></h4>
+              </div>
+            </div>
+            <div class="payment-info">
+              <div class="alert alert-info">
+                <p class="mb-2"><strong>Información de pago:</strong></p>
+                <p class="mb-1">Banco: {{ paymentInfo.bank || 'Banco Nacional' }}</p>
+                <p class="mb-1">Cuenta: {{ paymentInfo.account || '1234567890' }}</p>
+                <p class="mb-0">Titular: {{ paymentInfo.owner || room.branch.name }}</p>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button @click="closeQRModal" class="btn btn-secondary">
+              <i class="fas fa-times me-2"></i>
+              Cancelar
+            </button>
+            <button @click="confirmPayment" class="btn btn-success">
+              <i class="fas fa-check me-2"></i>
+              He realizado el pago
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Success Modal -->
+    <div v-if="showSuccessModal" class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header bg-success text-white">
+            <h5 class="modal-title">
+              <i class="fas fa-check-circle me-2"></i>
+              ¡Reserva Exitosa!
+            </h5>
+          </div>
+          <div class="modal-body text-center">
+            <div class="success-icon mb-3">
+              <i class="fas fa-check-circle text-success" style="font-size: 4rem;"></i>
+            </div>
+            <h4 class="text-success mb-3">¡Reserva Confirmada!</h4>
+            <div class="reservation-details bg-light p-3 rounded mb-3">
+              <h6>Detalles de tu Reserva:</h6>
+              <p class="mb-1"><strong>Código:</strong> {{ reservationData.reservation_code }}</p>
+              <p class="mb-1"><strong>Habitación:</strong> {{ room.room_type.name }} - {{ room.room_number }}</p>
+              <p class="mb-1"><strong>Check-in:</strong> {{ formatDate(form.check_in_date) }}</p>
+              <p class="mb-1"><strong>Check-out:</strong> {{ formatDate(form.check_out_date) }}</p>
+              <p class="mb-0"><strong>Total:</strong> Bs. {{ grandTotal.toFixed(2) }}</p>
+            </div>
+            <div class="next-steps">
+              <h6>Próximos Pasos:</h6>
+              <div v-if="form.payment_method === 'qr'" class="alert alert-info">
+                <p class="mb-0">
+                  <i class="fas fa-upload me-2"></i>
+                  No olvides subir tu comprobante de pago en "Mis Reservas"
+                </p>
+              </div>
+              <div v-else class="alert alert-warning">
+                <p class="mb-0">
+                  <i class="fas fa-money-bill-wave me-2"></i>
+                  Presenta este código al llegar al hospedaje para pagar en efectivo
+                </p>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button @click="downloadPDF" class="btn btn-primary me-2">
+              <i class="fas fa-download me-2"></i>
+              Descargar Boleta PDF
+            </button>
+            <button @click="closeSuccessModal" class="btn btn-success">
+              <i class="fas fa-check me-2"></i>
+              Entendido
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
-import { ref, computed, onMounted } from 'vue'
-import { useAuthStore } from '../../stores/auth.js'
-import { customerApi } from '../../services/api.js'
+import { ref, computed, onMounted, nextTick } from 'vue'
+import { customerApi } from '@/services/api'
+import jsPDF from 'jspdf'
+import 'jspdf-autotable'
+import QRCode from 'qrcode'
 
 export default {
   name: 'ReservationForm',
@@ -152,86 +516,695 @@ export default {
     },
     searchParams: {
       type: Object,
-      required: true
+      default: () => ({})
     }
   },
   emits: ['success', 'cancel'],
   setup(props, { emit }) {
-    const authStore = useAuthStore()
     const loading = ref(false)
+    const showSuccessModal = ref(false)
+    const showQRModal = ref(false)
+    const reservationData = ref({})
+    const errors = ref({})
+    const qrCodeRef = ref(null)
     
     const form = ref({
       room_id: props.room.id,
-      check_in_date: props.searchParams.check_in_date,
-      check_out_date: props.searchParams.check_out_date,
-      adults_count: props.searchParams.adults,
-      children_count: props.searchParams.children,
+      check_in_date: props.searchParams.check_in_date || '',
+      check_out_date: props.searchParams.check_out_date || '',
+      adults_count: props.searchParams.adults || 1,
+      children_count: props.searchParams.children || 0,
       needs_parking: false,
       payment_method: 'qr',
       special_requests: ''
     })
 
+    // Información de pago (esto debería venir del backend)
+    const paymentInfo = ref({
+      bank: 'Banco Nacional de Bolivia',
+      account: '1000123456789',
+      owner: props.room.branch?.name || 'Hotel'
+    })
+
+    // Fecha mínima (hoy)
+    const minDate = computed(() => {
+      const today = new Date()
+      return today.toISOString().split('T')[0]
+    })
+
+    // Calcular noches de estadía
+    const calculatedNights = computed(() => {
+      if (!form.value.check_in_date || !form.value.check_out_date) return 1
+      
+      const checkIn = new Date(form.value.check_in_date)
+      const checkOut = new Date(form.value.check_out_date)
+      const diffTime = checkOut - checkIn
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+      
+      return diffDays > 0 ? diffDays : 1
+    })
+
+    // Computed properties para costos
+    const roomTotal = computed(() => {
+      const pricePerNight = parseFloat(props.room.price_per_night) || 0
+      return pricePerNight * calculatedNights.value
+    })
+
     const parkingTotal = computed(() => {
-      return form.value.needs_parking ? (15 * props.searchParams.total_nights) : 0
+      return form.value.needs_parking ? (15 * calculatedNights.value) : 0
     })
 
     const grandTotal = computed(() => {
-      return props.room.room_total + parkingTotal.value
+      return roomTotal.value + parkingTotal.value
     })
 
-    const isAuthenticated = computed(() => authStore.isAuthenticated)
+    // Autenticación
+    const isAuthenticated = computed(() => {
+      const token = localStorage.getItem('auth_token')
+      return !!token
+    })
+
+    const isFormValid = computed(() => {
+      return form.value.check_in_date && 
+             form.value.check_out_date && 
+             form.value.adults_count && 
+             form.value.payment_method &&
+             calculatedNights.value > 0 &&
+             Object.keys(errors.value).length === 0
+    })
+
+    // Métodos
+    const updateStayDuration = () => {
+      // Forzar recálculo
+      if (form.value.check_in_date && form.value.check_out_date) {
+        const checkIn = new Date(form.value.check_in_date)
+        const checkOut = new Date(form.value.check_out_date)
+        
+        if (checkOut <= checkIn) {
+          // Si checkout es menor o igual que checkin, ajustar checkout
+          const newCheckOut = new Date(checkIn)
+          newCheckOut.setDate(newCheckOut.getDate() + 1)
+          form.value.check_out_date = newCheckOut.toISOString().split('T')[0]
+        }
+      }
+    }
+
+    const validateForm = () => {
+      errors.value = {}
+      
+      if (!form.value.check_in_date) {
+        errors.value.check_in_date = 'La fecha de check-in es requerida'
+      }
+      
+      if (!form.value.check_out_date) {
+        errors.value.check_out_date = 'La fecha de check-out es requerida'
+      }
+      
+      if (form.value.check_in_date && form.value.check_out_date) {
+        const checkIn = new Date(form.value.check_in_date)
+        const checkOut = new Date(form.value.check_out_date)
+        
+        if (checkOut <= checkIn) {
+          errors.value.check_out_date = 'La fecha de check-out debe ser posterior al check-in'
+        }
+        
+        if (checkIn < new Date(minDate.value)) {
+          errors.value.check_in_date = 'La fecha de check-in no puede ser anterior a hoy'
+        }
+      }
+      
+      if (!form.value.adults_count || form.value.adults_count < 1) {
+        errors.value.adults_count = 'Debe haber al menos 1 adulto'
+      }
+      
+      if (form.value.adults_count > props.room.room_type.max_adults) {
+        errors.value.adults_count = `Máximo ${props.room.room_type.max_adults} adultos para esta habitación`
+      }
+      
+      if (form.value.children_count > (props.room.room_type.max_children || 0)) {
+        errors.value.children_count = `Máximo ${props.room.room_type.max_children || 0} niños para esta habitación`
+      }
+      
+      const totalGuests = parseInt(form.value.adults_count) + parseInt(form.value.children_count)
+      if (totalGuests > props.room.room_type.max_guests) {
+        errors.value.children_count = `Total de huéspedes no puede exceder ${props.room.room_type.max_guests}`
+      }
+      
+      if (form.value.special_requests && form.value.special_requests.length > 500) {
+        errors.value.special_requests = 'Las solicitudes especiales no pueden exceder 500 caracteres'
+      }
+      
+      return Object.keys(errors.value).length === 0
+    }
+
+    const generateQRCode = async () => {
+      if (!qrCodeRef.value) return
+      
+      const paymentData = {
+        amount: grandTotal.value,
+        account: paymentInfo.value.account,
+        bank: paymentInfo.value.bank,
+        concept: `Reserva ${reservationData.value.reservation_code}`,
+        currency: 'BOB'
+      }
+      
+      const qrString = JSON.stringify(paymentData)
+      
+      try {
+        // Limpiar contenedor anterior
+        const container = document.getElementById('qrcode')
+        if (container) {
+          container.innerHTML = ''
+        }
+        
+        await QRCode.toCanvas(container, qrString, {
+          width: 250,
+          height: 250,
+          color: {
+            dark: '#000000',
+            light: '#FFFFFF'
+          }
+        })
+      } catch (error) {
+        console.error('Error generating QR code:', error)
+      }
+    }
 
     const handleReservation = async () => {
       if (!isAuthenticated.value) {
+        alert('Debes iniciar sesión para realizar una reserva')
+        return
+      }
+
+      if (!validateForm()) {
+        alert('Por favor, corrige los errores en el formulario')
         return
       }
 
       try {
         loading.value = true
         
-        const response = await customerApi.createReservation(form.value)
+        const reservationData = {
+          ...form.value,
+          total_amount: grandTotal.value,
+          parking_cost: parkingTotal.value,
+          nights: calculatedNights.value
+        }
         
-        // Mostrar mensaje de éxito
-        alert('Reserva creada exitosamente. Código: ' + response.data.reservation.reservation_code)
+        console.log('Creating reservation with data:', reservationData)
         
-        emit('success')
+        const response = await customerApi.createReservation(reservationData)
+        console.log('Reservation response:', response.data)
+        
+        if (response.data.success) {
+          reservationData.value = response.data.data || response.data.reservation
+        } else {
+          reservationData.value = response.data.reservation || response.data
+        }
+        
+        // Si es pago QR, mostrar modal QR primero
+        if (form.value.payment_method === 'qr') {
+          showQRModal.value = true
+          await nextTick()
+          await generateQRCode()
+        } else {
+          showSuccessModal.value = true
+        }
+        
       } catch (error) {
         console.error('Error creating reservation:', error)
-        alert('Error al crear la reserva: ' + (error.response?.data?.message || error.message))
+        
+        let errorMessage = 'Error al crear la reserva'
+        if (error.response?.data?.message) {
+          errorMessage = error.response.data.message
+        } else if (error.response?.data?.errors) {
+          const errorMessages = Object.values(error.response.data.errors).flat()
+          errorMessage = errorMessages.join(', ')
+        } else if (error.message) {
+          errorMessage = error.message
+        }
+        
+        alert('❌ ' + errorMessage)
       } finally {
         loading.value = false
       }
     }
 
+    const confirmPayment = () => {
+      showQRModal.value = false
+      showSuccessModal.value = true
+    }
+
+    const closeQRModal = () => {
+      showQRModal.value = false
+    }
+
+    const closeSuccessModal = () => {
+      showSuccessModal.value = false
+      emit('success', reservationData.value)
+    }
+
+    const downloadPDF = () => {
+      try {
+        const doc = new jsPDF()
+        
+        // Configuración del documento
+        doc.setFontSize(20)
+        doc.setTextColor(40, 40, 40)
+        doc.text('BOLETA DE RESERVA', 105, 30, { align: 'center' })
+        
+        // Información del hospedaje
+        doc.setFontSize(14)
+        doc.setTextColor(100, 100, 100)
+        doc.text(props.room.branch.name, 105, 45, { align: 'center' })
+        
+        // Línea separadora
+        doc.setLineWidth(0.5)
+        doc.line(20, 55, 190, 55)
+        
+        // Información de la reserva
+        doc.setFontSize(12)
+        doc.setTextColor(0, 0, 0)
+        
+        const reservationInfo = [
+          ['Código de Reserva:', reservationData.value.reservation_code],
+          ['Habitación:', `${props.room.room_type.name} - ${props.room.room_number}`],
+          ['Huésped:', `${form.value.adults_count} adulto(s), ${form.value.children_count} niño(s)`],
+          ['Check-in:', formatDate(form.value.check_in_date)],
+          ['Check-out:', formatDate(form.value.check_out_date)],
+          ['Noches:', `${calculatedNights.value} noche(s)`],
+          ['Método de Pago:', form.value.payment_method === 'qr' ? 'QR/Transferencia' : 'Efectivo']
+        ]
+        
+        let yPosition = 70
+        reservationInfo.forEach(([label, value]) => {
+          doc.text(label, 20, yPosition)
+          doc.text(value, 100, yPosition)
+          yPosition += 10
+        })
+        
+        // Desglose de costos
+        yPosition += 10
+        doc.setFontSize(14)
+        doc.text('DESGLOSE DE COSTOS:', 20, yPosition)
+        yPosition += 15
+        
+        const costBreakdown = [
+          ['Concepto', 'Cantidad', 'Precio Unit.', 'Subtotal'],
+          ['Habitación', `${calculatedNights.value} noche(s)`, `Bs. ${(roomTotal.value / calculatedNights.value).toFixed(2)}`, `Bs. ${roomTotal.value.toFixed(2)}`]
+        ]
+        
+        if (form.value.needs_parking) {
+          costBreakdown.push(['Estacionamiento', `${calculatedNights.value} noche(s)`, 'Bs. 15.00', `Bs. ${parkingTotal.value.toFixed(2)}`])
+        }
+        
+        costBreakdown.push(['', '', 'TOTAL:', `Bs. ${grandTotal.value.toFixed(2)}`])
+        
+        doc.autoTable({
+          startY: yPosition,
+          head: [costBreakdown[0]],
+          body: costBreakdown.slice(1),
+          theme: 'grid',
+          styles: { fontSize: 10 },
+          headStyles: { fillColor: [41, 128, 185] },
+          foot: [[{ content: `TOTAL: Bs. ${grandTotal.value.toFixed(2)}`, colSpan: 4, styles: { fontStyle: 'bold', halign: 'right' } }]]
+        })
+        
+        // Pie de página
+        const finalY = doc.lastAutoTable.finalY + 20
+        doc.setFontSize(10)
+        doc.setTextColor(100, 100, 100)
+        doc.text('Gracias por elegirnos. ¡Esperamos que disfrute su estadía!', 105, finalY, { align: 'center' })
+        
+        // Fecha de emisión
+        doc.text(`Fecha de emisión: ${new Date().toLocaleDateString('es-BO')}`, 105, finalY + 10, { align: 'center' })
+        
+        // Descargar el PDF
+        doc.save(`Boleta_Reserva_${reservationData.value.reservation_code}.pdf`)
+        
+      } catch (error) {
+        console.error('Error generating PDF:', error)
+        alert('Error al generar el PDF. Inténtalo de nuevo.')
+      }
+    }
+
+    const getRoomImage = (room) => {
+      if (room.main_photo) {
+        if (room.main_photo.startsWith('/') || room.main_photo.startsWith('http')) {
+          return room.main_photo
+        }
+        return `/storage/${room.main_photo}`
+      } else if (room.photos && room.photos.length > 0) {
+        const firstPhoto = room.photos[0]
+        if (firstPhoto.startsWith('/') || firstPhoto.startsWith('http')) {
+          return firstPhoto
+        }
+        return `/storage/${firstPhoto}`
+      }
+      return '/images/room-placeholder.jpg'
+    }
+
+    const formatDate = (dateString) => {
+      if (!dateString) return ''
+      const date = new Date(dateString)
+      return date.toLocaleDateString('es-BO', { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      })
+    }
+
+    // Initialize form with search params
+    onMounted(() => {
+      console.log('ReservationForm mounted with:', {
+        room: props.room,
+        searchParams: props.searchParams
+      })
+      
+      // Si no hay fechas en searchParams, usar valores por defecto
+      if (!form.value.check_in_date) {
+        const today = new Date()
+        form.value.check_in_date = today.toISOString().split('T')[0]
+      }
+      
+      if (!form.value.check_out_date) {
+        const tomorrow = new Date()
+        tomorrow.setDate(tomorrow.getDate() + 1)
+        form.value.check_out_date = tomorrow.toISOString().split('T')[0]
+      }
+    })
+
     return {
       form,
       loading,
+      showSuccessModal,
+      showQRModal,
+      reservationData,
+      errors,
+      qrCodeRef,
+      paymentInfo,
+      minDate,
+      calculatedNights,
+      roomTotal,
       parkingTotal,
       grandTotal,
       isAuthenticated,
-      handleReservation
+      isFormValid,
+      updateStayDuration,
+      handleReservation,
+      confirmPayment,
+      closeQRModal,
+      closeSuccessModal,
+      downloadPDF,
+      getRoomImage,
+      formatDate,
+      validateForm
     }
   }
 }
 </script>
 
 <style scoped>
-.form-check-input:checked {
-  background-color: #007bff;
-  border-color: #007bff;
+.reservation-form {
+  max-width: 100%;
+}
+
+.room-info-card {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 12px;
+  padding: 1.5rem;
+}
+
+.room-image-preview {
+  height: 120px;
+  overflow: hidden;
+  border-radius: 8px;
+}
+
+.room-image-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.room-title {
+  color: #495057;
+  font-weight: 600;
+}
+
+.room-branch {
+  font-size: 0.9rem;
+}
+
+.room-description {
+  color: #6c757d;
+  font-size: 0.9rem;
+}
+
+.form-section {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  border: 1px solid #e9ecef;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.section-title {
+  color: #495057;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #f8f9fa;
+}
+
+.form-check-card {
+  margin-bottom: 1rem;
+}
+
+.form-check-card .form-check-input {
+  display: none;
+}
+
+.service-card,
+.payment-card {
+  padding: 1rem;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.form-check-input:checked + .form-check-label .service-card,
+.form-check-input:checked + .form-check-label .payment-card {
+  border-color: #28a745;
+  background-color: #f8fff9;
+}
+
+.service-card:hover,
+.payment-card:hover {
+  border-color: #28a745;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.15);
+}
+
+.service-icon,
+.payment-icon {
+  font-size: 1.5rem;
+  width: 50px;
+  text-align: center;
+}
+
+.service-details,
+.payment-details {
+  flex: 1;
+}
+
+.service-name,
+.payment-name {
+  font-weight: 600;
+  color: #495057;
+}
+
+.service-description,
+.payment-description {
+  font-size: 0.85rem;
+  color: #6c757d;
+}
+
+.service-price {
+  text-align: right;
+}
+
+.service-price .price {
+  font-weight: 600;
+  color: #28a745;
+}
+
+.service-price .period {
+  color: #6c757d;
+  font-size: 0.8rem;
+}
+
+.cost-summary-section .card {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.cost-item {
+  padding: 0.75rem 0;
+}
+
+.cost-item:not(:last-child) {
+  border-bottom: 1px solid #f8f9fa;
+}
+
+.cost-label {
+  flex: 1;
+}
+
+.cost-value {
+  font-weight: 600;
+  color: #495057;
+}
+
+.cost-total {
+  padding: 1rem 0 0;
+}
+
+.total-value {
+  font-size: 1.25rem;
+}
+
+.payment-info-section .alert {
+  border-left: 4px solid #17a2b8;
+}
+
+.auth-warning .alert {
+  border-left: 4px solid #ffc107;
+}
+
+.form-actions {
+  margin-top: 2rem;
 }
 
 .btn-success {
-  background-color: #28a745;
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+  border: none;
+  font-weight: 600;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.btn-success:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+}
+
+.btn-outline-secondary {
+  border-color: #6c757d;
+  color: #6c757d;
+  font-weight: 600;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.btn-outline-secondary:hover {
+  background-color: #6c757d;
+  border-color: #6c757d;
+  transform: translateY(-2px);
+}
+
+.success-icon {
+  animation: checkScale 0.6s ease-in-out;
+}
+
+@keyframes checkScale {
+  0% { transform: scale(0); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+.modal.show {
+  display: block !important;
+}
+
+.modal-content {
+  border-radius: 12px;
+  border: none;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+}
+
+.reservation-details {
+  text-align: left;
+}
+
+.next-steps {
+  text-align: left;
+}
+
+.form-control:focus,
+.form-select:focus {
   border-color: #28a745;
+  box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
 }
 
-.btn-success:hover {
-  background-color: #218838;
-  border-color: #1e7e34;
+.is-invalid {
+  border-color: #dc3545;
 }
 
-.text-success {
-  color: #28a745 !important;
+.invalid-feedback {
+  display: block;
+}
+
+.stay-duration,
+.guest-capacity-info,
+.form-text {
+  margin-top: 0.5rem;
+}
+
+.guest-capacity-info .alert {
+  margin-bottom: 0;
+}
+
+.qr-code-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1rem;
+  background: white;
+  border-radius: 8px;
+  border: 2px solid #e9ecef;
+  margin: 0 auto;
+  width: fit-content;
+}
+
+#qrcode {
+  display: flex;
+  justify-content: center;
+}
+
+@media (max-width: 768px) {
+  .form-section {
+    padding: 1rem;
+  }
+  
+  .room-info-card {
+    padding: 1rem;
+  }
+  
+  .service-card,
+  .payment-card {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .service-price {
+    text-align: center;
+  }
 }
 </style>

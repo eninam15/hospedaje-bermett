@@ -13,7 +13,7 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->foreignId('branch_id')->constrained()->onDelete('cascade');
             $table->foreignId('room_id')->constrained()->onDelete('cascade');
-            $table->string('reservation_code')->unique(); // RES + 6 dígitos
+            $table->string('reservation_code')->unique();
             $table->date('check_in_date');
             $table->date('check_out_date');
             $table->integer('total_nights');

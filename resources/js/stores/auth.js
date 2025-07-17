@@ -37,6 +37,9 @@ export const useAuthStore = defineStore('auth', {
       try {
         const response = await axios.post('/auth/login', credentials)
         
+        console.log('Login response:', response.data);
+    
+        
         this.token = response.data.token
         this.user = response.data.user
         this.isAuthenticated = true

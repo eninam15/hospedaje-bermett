@@ -119,8 +119,9 @@ class ReservationController extends Controller
         $totalAmount = $roomTotal + $parkingFee;
 
         // Crear reserva
-        $reservation = Reservation::create([
-            'user_id' => $request->user()->id,
+        // Crear instancia sin guardar
+        $reservation = new Reservation([
+            'user_id' => 1,
             'branch_id' => $room->branch_id,
             'room_id' => $request->room_id,
             'check_in_date' => $checkIn,
@@ -137,7 +138,7 @@ class ReservationController extends Controller
             'status' => $request->payment_method === 'cash' ? 'pending_payment' : 'pending_payment',
         ]);
 
-        // Generar código de reserva
+        // Generar código antes de guardar
         $reservation->generateCode();
         $reservation->save();
 

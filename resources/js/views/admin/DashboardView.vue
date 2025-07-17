@@ -50,7 +50,7 @@
           </div>
         </div>
 
-        <!-- Acciones rápidas -->
+        <!-- Acciones rápidas principales -->
         <div class="row mb-4">
           <div class="col-12">
             <div class="card">
@@ -60,23 +60,80 @@
               <div class="card-body">
                 <div class="row">
                   <div class="col-md-6 col-lg-3 mb-3">
-                    <button class="btn btn-outline-primary w-100" @click="navigateTo('users')">
+                    <button class="btn btn-outline-primary w-100" @click="navigateTo('admin.users')">
                       <i class="pi pi-users"></i> Gestionar Usuarios
                     </button>
                   </div>
                   <div class="col-md-6 col-lg-3 mb-3">
-                    <button class="btn btn-outline-success w-100" @click="navigateTo('rooms')">
+                    <button class="btn btn-outline-success w-100" @click="navigateTo('admin.rooms')">
                       <i class="pi pi-home"></i> Gestionar Habitaciones
                     </button>
                   </div>
                   <div class="col-md-6 col-lg-3 mb-3">
-                    <button class="btn btn-outline-warning w-100" @click="navigateTo('payments')">
+                    <button class="btn btn-outline-warning w-100" @click="navigateTo('admin.payments.pending')">
                       <i class="pi pi-credit-card"></i> Validar Pagos
                     </button>
                   </div>
                   <div class="col-md-6 col-lg-3 mb-3">
-                    <button class="btn btn-outline-info w-100" @click="navigateTo('reports')">
+                    <button class="btn btn-outline-info w-100" @click="navigateTo('admin.reports')">
                       <i class="pi pi-chart-bar"></i> Generar Reportes
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Acciones adicionales -->
+        <div class="row mb-4">
+          <div class="col-12">
+            <div class="card">
+              <div class="card-header">
+                <h5 class="mb-0">Gestión del Sistema</h5>
+              </div>
+              <div class="card-body">
+                <div class="row">
+                  <div class="col-md-6 col-lg-3 mb-3">
+                    <button class="btn btn-outline-secondary w-100" @click="navigateTo('admin.reservations')">
+                      <i class="pi pi-calendar"></i> Todas las Reservas
+                    </button>
+                  </div>
+                  <div class="col-md-6 col-lg-3 mb-3">
+                    <button class="btn btn-outline-secondary w-100" @click="navigateTo('admin.room-types')">
+                      <i class="pi pi-th-large"></i> Tipos de Habitación
+                    </button>
+                  </div>
+                  <div class="col-md-6 col-lg-3 mb-3">
+                    <button class="btn btn-outline-secondary w-100" @click="navigateTo('admin.branches')">
+                      <i class="pi pi-building"></i> Sucursales
+                    </button>
+                  </div>
+                  <div class="col-md-6 col-lg-3 mb-3">
+                    <button class="btn btn-outline-secondary w-100" @click="navigateTo('admin.services')">
+                      <i class="pi pi-cog"></i> Servicios
+                    </button>
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="col-md-6 col-lg-3 mb-3">
+                    <button class="btn btn-outline-secondary w-100" @click="navigateTo('admin.payments')">
+                      <i class="pi pi-money-bill"></i> Historial de Pagos
+                    </button>
+                  </div>
+                  <div class="col-md-6 col-lg-3 mb-3">
+                    <button class="btn btn-outline-secondary w-100" @click="navigateTo('admin.registrations')">
+                      <i class="pi pi-user-plus"></i> Registros
+                    </button>
+                  </div>
+                  <div class="col-md-6 col-lg-3 mb-3">
+                    <button class="btn btn-outline-secondary w-100" @click="navigateTo('admin.settings')">
+                      <i class="pi pi-cog"></i> Configuraciones
+                    </button>
+                  </div>
+                  <div class="col-md-6 col-lg-3 mb-3">
+                    <button class="btn btn-outline-dark w-100" @click="navigateTo('admin.reports')">
+                      <i class="pi pi-file-pdf"></i> Reportes Detallados
                     </button>
                   </div>
                 </div>
@@ -136,6 +193,50 @@
           </div>
         </div>
 
+        <!-- Accesos rápidos a alertas -->
+        <div class="row mb-4">
+          <div class="col-12">
+            <div class="card">
+              <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Accesos Rápidos</h5>
+                <div>
+                  <button class="btn btn-sm btn-outline-primary me-2" @click="navigateTo('admin.payments.pending')">
+                    <i class="pi pi-clock"></i> Pagos Pendientes ({{ stats.pendingPayments }})
+                  </button>
+                  <button class="btn btn-sm btn-outline-success" @click="navigateTo('admin.reservations')">
+                    <i class="pi pi-calendar"></i> Ver Todas las Reservas
+                  </button>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="row">
+                  <div class="col-md-4 mb-3">
+                    <div class="border rounded p-3 text-center">
+                      <i class="pi pi-clock text-warning mb-2" style="font-size: 1.5rem;"></i>
+                      <h6>Check-ins Hoy</h6>
+                      <span class="badge bg-warning">{{ stats.checkInsToday || 0 }}</span>
+                    </div>
+                  </div>
+                  <div class="col-md-4 mb-3">
+                    <div class="border rounded p-3 text-center">
+                      <i class="pi pi-sign-out text-info mb-2" style="font-size: 1.5rem;"></i>
+                      <h6>Check-outs Hoy</h6>
+                      <span class="badge bg-info">{{ stats.checkOutsToday || 0 }}</span>
+                    </div>
+                  </div>
+                  <div class="col-md-4 mb-3">
+                    <div class="border rounded p-3 text-center">
+                      <i class="pi pi-exclamation-triangle text-danger mb-2" style="font-size: 1.5rem;"></i>
+                      <h6>Reservas Vencidas</h6>
+                      <span class="badge bg-danger">{{ stats.expiredReservations || 0 }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Alertas importantes -->
         <div class="row">
           <div class="col-12">
@@ -148,6 +249,9 @@
                   <div v-for="alert in alerts" :key="alert.id" :class="getAlertClass(alert.type)" class="mb-2">
                     <i :class="getAlertIcon(alert.type)"></i>
                     {{ alert.message }}
+                    <button v-if="alert.action" class="btn btn-sm btn-outline-secondary ms-2" @click="navigateTo(alert.action)">
+                      Ver más
+                    </button>
                   </div>
                 </div>
                 <div v-else class="text-center text-muted">
@@ -179,7 +283,10 @@ export default {
       totalReservations: 0,
       confirmedReservations: 0,
       pendingPayments: 0,
-      availableRooms: 0
+      availableRooms: 0,
+      checkInsToday: 0,
+      checkOutsToday: 0,
+      expiredReservations: 0
     })
     
     const branchStats = ref({
@@ -205,7 +312,10 @@ export default {
           totalReservations: 25,
           confirmedReservations: 18,
           pendingPayments: 3,
-          availableRooms: 7
+          availableRooms: 7,
+          checkInsToday: 2,
+          checkOutsToday: 1,
+          expiredReservations: 0
         }
         
         branchStats.value = {
@@ -223,12 +333,20 @@ export default {
           {
             id: 1,
             type: 'warning',
-            message: 'Tienes 3 pagos pendientes de validación'
+            message: 'Tienes 3 pagos pendientes de validación',
+            action: 'admin.payments.pending'
           },
           {
             id: 2,
             type: 'info',
-            message: 'Nueva reserva creada hace 10 minutos'
+            message: 'Nueva reserva creada hace 10 minutos',
+            action: 'admin.reservations'
+          },
+          {
+            id: 3,
+            type: 'success',
+            message: 'Check-in completado correctamente - Habitación 205',
+            action: 'admin.reservations'
           }
         ]
         
@@ -239,9 +357,14 @@ export default {
       }
     }
 
-    const navigateTo = (section) => {
-      // Por ahora solo mostramos alert, más adelante implementaremos las rutas
-      alert(`Navegando a ${section}... (Por implementar)`)
+    const navigateTo = (routeName) => {
+      try {
+        router.push({ name: routeName })
+      } catch (error) {
+        console.error('Error navigating to:', routeName, error)
+        // Fallback para rutas que no existen aún
+        alert(`Navegando a ${routeName}... (Vista en desarrollo)`)
+      }
     }
 
     const getAlertClass = (type) => {
@@ -341,8 +464,26 @@ export default {
   border-color: #17a2b8;
 }
 
+.btn-outline-secondary:hover {
+  background-color: #6c757d;
+  border-color: #6c757d;
+}
+
+.btn-outline-dark:hover {
+  background-color: #343a40;
+  border-color: #343a40;
+}
+
 .alert {
   border: none;
   border-radius: 0.5rem;
+}
+
+.border {
+  border: 1px solid #dee2e6 !important;
+}
+
+.badge {
+  font-size: 0.875rem;
 }
 </style>
