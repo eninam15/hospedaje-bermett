@@ -2,30 +2,94 @@
   <div class="container-fluid">
     <div class="row">
       <div class="col-12">
-        <div class="card">
-          <div class="card-header d-flex justify-content-between align-items-center">
-            <h4>Registros Check-in/Check-out</h4>
+        <!-- Header Principal -->
+        <div class="header-section mb-4">
+          <div class="d-flex justify-content-between align-items-center">
+            <div class="header-title">
+              <h1 class="main-title">
+                <i class="fas fa-clipboard-check me-3"></i>
+                Registros Check-in/Check-out
+              </h1>
+              <p class="subtitle">Gestión de ingresos y salidas de huéspedes</p>
+            </div>
             <button 
-              class="btn btn-primary"
+              class="btn btn-success btn-lg btn-create"
               @click="openDirectRegistrationModal"
               :disabled="loading"
             >
-              <i class="fas fa-plus"></i> Registro Directo
+              <i class="fas fa-plus me-2"></i>
+              Registro Directo
             </button>
           </div>
-          
+        </div>
+
+        <!-- Estadísticas rápidas -->
+        <div class="row mb-4" v-if="showStats && stats">
+          <div class="col-md-3 col-6">
+            <div class="stats-card">
+              <div class="stats-icon bg-primary">
+                <i class="fas fa-users"></i>
+              </div>
+              <div class="stats-content">
+                <h4>{{ stats.general.total_registrations }}</h4>
+                <p>Total Registros</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3 col-6">
+            <div class="stats-card">
+              <div class="stats-icon bg-success">
+                <i class="fas fa-check-circle"></i>
+              </div>
+              <div class="stats-content">
+                <h4>{{ stats.general.active_registrations }}</h4>
+                <p>Activos</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3 col-6">
+            <div class="stats-card">
+              <div class="stats-icon bg-info">
+                <i class="fas fa-calendar-check"></i>
+              </div>
+              <div class="stats-content">
+                <h4>{{ stats.general.completed_registrations }}</h4>
+                <p>Completados</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3 col-6">
+            <div class="stats-card">
+              <div class="stats-icon bg-warning">
+                <i class="fas fa-clock"></i>
+              </div>
+              <div class="stats-content">
+                <h4>{{ stats.general.avg_stay_duration }}</h4>
+                <p>Promedio días</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filtros mejorados -->
+        <div class="card modern-card mb-4">
+          <div class="card-header bg-light">
+            <h5 class="mb-0">
+              <i class="fas fa-filter me-2"></i>
+              Filtros y Búsqueda
+            </h5>
+          </div>
           <div class="card-body">
-            <!-- Filtros -->
-            <div class="row mb-3">
+            <div class="row g-3">
               <div class="col-md-3">
-                <label class="form-label">Estado</label>
+                <label class="form-label">Estado del Registro</label>
                 <select 
                   v-model="filters.status" 
                   class="form-select"
                   @change="fetchRegistrations"
                 >
                   <option value="">Todos los estados</option>
-                  <option value="active">Activo</option>
+                  <option value="active">Activo (En estadía)</option>
                   <option value="completed">Completado</option>
                 </select>
               </div>
@@ -48,8 +112,8 @@
                 </select>
               </div>
               
-              <div class="col-md-3">
-                <label class="form-label">Buscar</label>
+              <div class="col-md-4">
+                <label class="form-label">Búsqueda</label>
                 <input 
                   v-model="filters.search"
                   type="text" 
@@ -59,216 +123,290 @@
                 >
               </div>
               
-              <div class="col-md-3 d-flex align-items-end">
-                <button 
-                  class="btn btn-outline-secondary me-2"
-                  @click="clearFilters"
-                >
-                  <i class="fas fa-times"></i> Limpiar
-                </button>
-                <button 
-                  class="btn btn-outline-info"
-                  @click="fetchStats"
-                >
-                  <i class="fas fa-chart-bar"></i> Stats
-                </button>
-              </div>
-            </div>
-
-            <!-- Estadísticas rápidas -->
-            <div class="row mb-3" v-if="showStats && stats">
-              <div class="col-md-3">
-                <div class="card bg-primary text-white">
-                  <div class="card-body text-center">
-                    <h5>{{ stats.general.total_registrations }}</h5>
-                    <small>Total Registros</small>
-                  </div>
-                </div>
-              </div>
-              <div class="col-md-3">
-                <div class="card bg-success text-white">
-                  <div class="card-body text-center">
-                    <h5>{{ stats.general.active_registrations }}</h5>
-                    <small>Activos</small>
-                  </div>
-                </div>
-              </div>
-              <div class="col-md-3">
-                <div class="card bg-info text-white">
-                  <div class="card-body text-center">
-                    <h5>{{ stats.general.completed_registrations }}</h5>
-                    <small>Completados</small>
-                  </div>
-                </div>
-              </div>
-              <div class="col-md-3">
-                <div class="card bg-warning text-white">
-                  <div class="card-body text-center">
-                    <h5>{{ stats.general.avg_stay_duration }}</h5>
-                    <small>Promedio días</small>
-                  </div>
+              <div class="col-md-2 d-flex align-items-end">
+                <div class="filter-actions d-flex gap-2 w-100">
+                  <button 
+                    class="btn btn-outline-secondary filter-btn"
+                    @click="clearFilters"
+                    title="Limpiar todos los filtros aplicados"
+                  >
+                    <i class="fas fa-times me-1"></i>
+                    <span class="btn-text">Limpiar</span>
+                  </button>
+                  <button 
+                    class="btn btn-outline-primary filter-btn"
+                    @click="fetchStats"
+                    title="Mostrar/ocultar estadísticas detalladas"
+                  >
+                    <i class="fas fa-chart-bar me-1"></i>
+                    <span class="btn-text">{{ showStats ? 'Ocultar' : 'Stats' }}</span>
+                  </button>
                 </div>
               </div>
             </div>
-            
-            <!-- Loading state -->
-            <div v-if="loading" class="text-center p-4">
-              <div class="spinner-border" role="status">
-                <span class="visually-hidden">Cargando...</span>
-              </div>
+          </div>
+        </div>
+        
+        <!-- Loading state -->
+        <div v-if="loading" class="loading-section">
+          <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+              <span class="visually-hidden">Cargando registros...</span>
             </div>
-            
-            <!-- Error state -->
-            <div v-if="error" class="alert alert-danger">
-              <i class="fas fa-exclamation-triangle"></i>
-              {{ error }}
-              <button class="btn btn-sm btn-outline-danger ms-2" @click="fetchRegistrations">
+            <h5 class="mt-3 text-muted">Cargando registros...</h5>
+          </div>
+        </div>
+        
+        <!-- Error state -->
+        <div v-if="error" class="alert alert-danger rounded-3">
+          <div class="d-flex align-items-center">
+            <i class="fas fa-exclamation-triangle me-3 fs-4"></i>
+            <div>
+              <h6 class="alert-heading mb-1">Error al cargar datos</h6>
+              <p class="mb-2">{{ error }}</p>
+              <button class="btn btn-sm btn-outline-danger" @click="fetchRegistrations">
+                <i class="fas fa-sync me-1"></i>
                 Reintentar
               </button>
             </div>
-            
-            <!-- Tabla de registros -->
-            <div class="table-responsive" v-if="!loading">
-              <table class="table table-striped table-hover">
-                <thead class="table-dark">
-                  <tr>
-                    <th>Código</th>
-                    <th>Reserva</th>
-                    <th>Cliente</th>
-                    <th>Habitación</th>
-                    <th>Check-in</th>
-                    <th>Check-out</th>
-                    <th>Estado</th>
-                    <th>Huéspedes</th>
-                    <th>Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-if="registrations.length === 0">
-                    <td colspan="9" class="text-center py-4">
-                      <i class="fas fa-inbox fa-2x text-muted mb-2"></i>
-                      <p class="text-muted">No hay registros disponibles</p>
-                    </td>
-                  </tr>
-                  
-                  <tr v-for="registration in registrations" :key="registration.id">
-                    <td>
-                      <strong>{{ registration.registration_code }}</strong>
-                    </td>
-                    <td>
-                      <span v-if="registration.reservation" class="badge bg-info">
-                        {{ registration.reservation.reservation_code }}
-                      </span>
-                      <span v-else class="badge bg-warning">Sin reserva</span>
-                    </td>
-                    <td>
-                      <div>
-                        <strong>{{ registration.user.name }}</strong>
-                        <br>
-                        <small class="text-muted">{{ registration.user.email }}</small>
-                      </div>
-                    </td>
-                    <td>
-                      <span class="badge bg-secondary">
-                        {{ registration.room.room_number }}
-                      </span>
-                      <br>
-                      <small>{{ registration.room.room_type?.name }}</small>
-                    </td>
-                    <td>
-                      {{ formatDateTime(registration.actual_check_in) }}
-                    </td>
-                    <td>
-                      <span v-if="registration.actual_check_out">
-                        {{ formatDateTime(registration.actual_check_out) }}
-                      </span>
-                      <span v-else class="text-muted">-</span>
-                    </td>
-                    <td>
-                      <span 
-                        :class="getStatusClass(registration.status)"
-                        class="badge"
-                      >
-                        {{ getStatusText(registration.status) }}
-                      </span>
-                    </td>
-                    <td>
-                      <span class="badge bg-light text-dark">
-                        {{ getTotalGuests(registration) }}
-                      </span>
-                    </td>
-                    <td>
-                      <div class="btn-group" role="group">
-                        <button 
-                          class="btn btn-sm btn-outline-primary"
-                          @click="viewRegistration(registration)"
-                          title="Ver detalles"
-                        >
-                          <i class="fas fa-eye"></i>
-                        </button>
-                        
-                        <button 
-                          v-if="registration.status === 'active'"
-                          class="btn btn-sm btn-outline-warning"
-                          @click="editRegistration(registration)"
-                          title="Editar"
-                        >
-                          <i class="fas fa-edit"></i>
-                        </button>
-
-                        <!-- Botón de Check-out -->
-                        <button 
-                          v-if="registration.status === 'active'"
-                          class="btn btn-sm btn-outline-success"
-                          @click="openCheckOutModal(registration)"
-                          title="Check-out"
-                        >
-                          <i class="fas fa-sign-out-alt"></i>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-            
-            <!-- Paginación -->
-            <nav v-if="pagination && pagination.last_page > 1" class="mt-3">
-              <ul class="pagination justify-content-center">
-                <li class="page-item" :class="{ disabled: pagination.current_page === 1 }">
-                  <button 
-                    class="page-link"
-                    @click="changePage(pagination.current_page - 1)"
-                    :disabled="pagination.current_page === 1"
-                  >
-                    Anterior
-                  </button>
-                </li>
-                
-                <li 
-                  v-for="page in getPageNumbers()" 
-                  :key="page"
-                  class="page-item"
-                  :class="{ active: page === pagination.current_page }"
-                >
-                  <button class="page-link" @click="changePage(page)">
-                    {{ page }}
-                  </button>
-                </li>
-                
-                <li class="page-item" :class="{ disabled: pagination.current_page === pagination.last_page }">
-                  <button 
-                    class="page-link"
-                    @click="changePage(pagination.current_page + 1)"
-                    :disabled="pagination.current_page === pagination.last_page"
-                  >
-                    Siguiente
-                  </button>
-                </li>
-              </ul>
-            </nav>
           </div>
         </div>
+        
+        <!-- Tabla de registros -->
+        <div v-if="!loading && !error && registrations.length > 0" class="registrations-section">
+          <div class="card modern-card">
+            <div class="card-header">
+              <h5 class="mb-0">
+                <i class="fas fa-list me-2"></i>
+                Registros ({{ pagination?.total || registrations.length }})
+              </h5>
+            </div>
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table class="table table-hover registration-table mb-0">
+                  <thead class="table-header">
+                    <tr>
+                      <th width="12%">Código</th>
+                      <th width="18%">Cliente</th>
+                      <th width="14%">Habitación</th>
+                      <th width="9%">Estado</th>
+                      <th width="12%">Check-in</th>
+                      <th width="12%">Check-out</th>
+                      <th width="7%">Huéspedes</th>
+                      <th width="16%">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="registration in registrations" :key="registration.id" class="registration-row">
+                      <!-- Código del registro -->
+                      <td>
+                        <div class="registration-code">
+                          <strong>{{ registration.registration_code }}</strong>
+                          <div v-if="registration.reservation" class="reservation-tag">
+                            <i class="fas fa-ticket-alt me-1"></i>
+                            <small>{{ registration.reservation.reservation_code }}</small>
+                          </div>
+                        </div>
+                      </td>
+                      
+                      <!-- Cliente -->
+                      <td>
+                        <div class="client-info">
+                          <div class="client-name">
+                            <i class="fas fa-user me-1"></i>
+                            <strong>{{ registration.user.name }}</strong>
+                          </div>
+                          <div class="client-details">
+                            <small class="text-muted">{{ registration.user.email }}</small>
+                          </div>
+                        </div>
+                      </td>
+                      
+                      <!-- Habitación -->
+                      <td>
+                        <div class="room-info">
+                          <div class="room-number">
+                            <i class="fas fa-bed me-1"></i>
+                            <strong>{{ registration.room.room_number }}</strong>
+                          </div>
+                          <div class="room-details">
+                            <small class="text-muted">{{ registration.room.room_type?.name }}</small>
+                            <br>
+                            <small class="text-muted">
+                              <i class="fas fa-map-marker-alt me-1"></i>
+                              {{ registration.branch?.name }}
+                            </small>
+                          </div>
+                        </div>
+                      </td>
+                      
+                      <!-- Estado -->
+                      <td>
+                        <span :class="getStatusClass(registration.status)">
+                          {{ getStatusText(registration.status) }}
+                        </span>
+                      </td>
+                      
+                      <!-- Check-in -->
+                      <td>
+                        <div class="date-info">
+                          <div class="date-value">
+                            <i class="fas fa-calendar-check text-success me-1"></i>
+                            {{ formatDate(registration.actual_check_in) }}
+                          </div>
+                          <div class="time-value">
+                            <small class="text-muted">{{ formatTime(registration.actual_check_in) }}</small>
+                          </div>
+                        </div>
+                      </td>
+                      
+                      <!-- Check-out -->
+                      <td>
+                        <div class="date-info" v-if="registration.actual_check_out">
+                          <div class="date-value">
+                            <i class="fas fa-calendar-times text-danger me-1"></i>
+                            {{ formatDate(registration.actual_check_out) }}
+                          </div>
+                          <div class="time-value">
+                            <small class="text-muted">{{ formatTime(registration.actual_check_out) }}</small>
+                          </div>
+                        </div>
+                        <div v-else class="stay-duration">
+                          <i class="fas fa-clock text-warning me-1"></i>
+                          <small class="text-muted">{{ getStayDuration(registration.actual_check_in) }}</small>
+                        </div>
+                      </td>
+                      
+                      <!-- Huéspedes -->
+                      <td>
+                        <div class="guests-info">
+                          <span class="badge bg-light text-dark">
+                            <i class="fas fa-users me-1"></i>
+                            {{ getTotalGuests(registration) }}
+                          </span>
+                        </div>
+                      </td>
+                      
+                      <!-- Acciones -->
+                      <td>
+                        <div class="action-buttons">
+                          <div class="btn-group-vertical d-flex flex-column gap-1">
+                            <!-- Botón Ver -->
+                            <button 
+                              class="btn btn-sm btn-primary action-btn"
+                              @click="viewRegistration(registration)"
+                              title="Ver detalles completos del registro"
+                            >
+                              <i class="fas fa-eye me-1"></i>
+                              <span class="btn-text">Ver</span>
+                            </button>
+                            
+                            <!-- Botón PDF -->
+                            <button 
+                              class="btn btn-sm btn-info action-btn"
+                              @click="downloadCheckInPDF(registration)"
+                              title="Descargar comprobante de check-in en PDF"
+                            >
+                              <i class="fas fa-file-pdf me-1"></i>
+                              <span class="btn-text">PDF</span>
+                            </button>
+                            
+                            <!-- Botón Check-out (solo para activos) -->
+                            <button 
+                              v-if="registration.status === 'active'"
+                              class="btn btn-sm btn-success action-btn"
+                              @click="openCheckOutModal(registration)"
+                              title="Procesar check-out del huésped"
+                            >
+                              <i class="fas fa-sign-out-alt me-1"></i>
+                              <span class="btn-text">Check-out</span>
+                            </button>
+                            
+                            <!-- Indicador de estado completado -->
+                            <span 
+                              v-if="registration.status === 'completed'"
+                              class="badge bg-secondary mt-1"
+                              title="Registro completado - No hay acciones disponibles"
+                            >
+                              <i class="fas fa-check-circle me-1"></i>
+                              Completado
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Empty state -->
+        <div v-else-if="!loading && !error && registrations.length === 0" class="empty-state">
+          <div class="text-center py-5">
+            <div class="empty-icon">
+              <i class="fas fa-clipboard-list"></i>
+            </div>
+            <h3 class="empty-title">No hay registros disponibles</h3>
+            <p class="empty-description">
+              No se encontraron registros que coincidan con los filtros seleccionados.
+            </p>
+            <div class="empty-actions">
+              <button @click="clearFilters" class="btn btn-outline-primary btn-lg me-2">
+                <i class="fas fa-filter me-2"></i>
+                Limpiar Filtros
+              </button>
+              <button @click="openDirectRegistrationModal" class="btn btn-success btn-lg">
+                <i class="fas fa-plus me-2"></i>
+                Crear Registro
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Paginación mejorada -->
+        <nav v-if="pagination && pagination.last_page > 1" class="pagination-section mt-4">
+          <div class="d-flex justify-content-between align-items-center">
+            <div class="pagination-info">
+              <span class="text-muted">
+                Mostrando {{ pagination.from }} a {{ pagination.to }} de {{ pagination.total }} registros
+              </span>
+            </div>
+            <ul class="pagination mb-0">
+              <li class="page-item" :class="{ disabled: pagination.current_page === 1 }">
+                <button 
+                  class="page-link"
+                  @click="changePage(pagination.current_page - 1)"
+                  :disabled="pagination.current_page === 1"
+                >
+                  <i class="fas fa-chevron-left"></i>
+                </button>
+              </li>
+              
+              <li 
+                v-for="page in getPageNumbers()" 
+                :key="page"
+                class="page-item"
+                :class="{ active: page === pagination.current_page }"
+              >
+                <button class="page-link" @click="changePage(page)">
+                  {{ page }}
+                </button>
+              </li>
+              
+              <li class="page-item" :class="{ disabled: pagination.current_page === pagination.last_page }">
+                <button 
+                  class="page-link"
+                  @click="changePage(pagination.current_page + 1)"
+                  :disabled="pagination.current_page === pagination.last_page"
+                >
+                  <i class="fas fa-chevron-right"></i>
+                </button>
+              </li>
+            </ul>
+          </div>
+        </nav>
       </div>
     </div>
 
@@ -403,49 +541,55 @@
               <!-- Checklist de verificación -->
               <div class="mb-3">
                 <h6>Checklist de verificación</h6>
-                <div class="form-check">
-                  <input 
-                    v-model="checkOutForm.room_cleaned"
-                    type="checkbox" 
-                    class="form-check-input"
-                    id="roomCleaned"
-                  >
-                  <label class="form-check-label" for="roomCleaned">
-                    Habitación revisada
-                  </label>
-                </div>
-                <div class="form-check">
-                  <input 
-                    v-model="checkOutForm.keys_returned"
-                    type="checkbox" 
-                    class="form-check-input"
-                    id="keysReturned"
-                  >
-                  <label class="form-check-label" for="keysReturned">
-                    Llaves devueltas
-                  </label>
-                </div>
-                <div class="form-check">
-                  <input 
-                    v-model="checkOutForm.minibar_checked"
-                    type="checkbox" 
-                    class="form-check-input"
-                    id="minibarChecked"
-                  >
-                  <label class="form-check-label" for="minibarChecked">
-                    Minibar revisado
-                  </label>
-                </div>
-                <div class="form-check">
-                  <input 
-                    v-model="checkOutForm.client_satisfied"
-                    type="checkbox" 
-                    class="form-check-input"
-                    id="clientSatisfied"
-                  >
-                  <label class="form-check-label" for="clientSatisfied">
-                    Cliente satisfecho con la estadía
-                  </label>
+                <div class="row">
+                  <div class="col-md-6">
+                    <div class="form-check">
+                      <input 
+                        v-model="checkOutForm.room_cleaned"
+                        type="checkbox" 
+                        class="form-check-input"
+                        id="roomCleaned"
+                      >
+                      <label class="form-check-label" for="roomCleaned">
+                        Habitación revisada
+                      </label>
+                    </div>
+                    <div class="form-check">
+                      <input 
+                        v-model="checkOutForm.keys_returned"
+                        type="checkbox" 
+                        class="form-check-input"
+                        id="keysReturned"
+                      >
+                      <label class="form-check-label" for="keysReturned">
+                        Llaves devueltas *
+                      </label>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="form-check">
+                      <input 
+                        v-model="checkOutForm.minibar_checked"
+                        type="checkbox" 
+                        class="form-check-input"
+                        id="minibarChecked"
+                      >
+                      <label class="form-check-label" for="minibarChecked">
+                        Minibar revisado
+                      </label>
+                    </div>
+                    <div class="form-check">
+                      <input 
+                        v-model="checkOutForm.client_satisfied"
+                        type="checkbox" 
+                        class="form-check-input"
+                        id="clientSatisfied"
+                      >
+                      <label class="form-check-label" for="clientSatisfied">
+                        Cliente satisfecho
+                      </label>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -496,7 +640,10 @@
       <div class="modal-dialog modal-lg">
         <div class="modal-content">
           <div class="modal-header">
-            <h5 class="modal-title">Registro Directo</h5>
+            <h5 class="modal-title">
+              <i class="fas fa-user-plus me-2"></i>
+              Registro Directo
+            </h5>
             <button 
               type="button" 
               class="btn-close" 
@@ -719,8 +866,46 @@
                       id="needsParking"
                     >
                     <label class="form-check-label" for="needsParking">
-                      Necesita estacionamiento (+Bs. 10/noche)
+                      Necesita estacionamiento (Gratuito)
                     </label>
+                  </div>
+                </div>
+
+                <!-- Información del vehículo -->
+                <div v-if="directRegistration.form.needs_parking" class="mb-3">
+                  <div class="card bg-light">
+                    <div class="card-body">
+                      <h6 class="card-title">
+                        <i class="fas fa-car me-2"></i>
+                        Información del Vehículo
+                      </h6>
+                      <div class="row">
+                        <div class="col-md-6">
+                          <label class="form-label">Modelo del vehículo *</label>
+                          <input 
+                            v-model="vehicleInfo.model"
+                            type="text" 
+                            class="form-control"
+                            placeholder="Ej: Toyota Corolla 2020"
+                            required
+                          >
+                        </div>
+                        <div class="col-md-6">
+                          <label class="form-label">Placa del vehículo *</label>
+                          <input 
+                            v-model="vehicleInfo.license_plate"
+                            type="text" 
+                            class="form-control"
+                            placeholder="Ej: ABC-1234"
+                            required
+                          >
+                        </div>
+                      </div>
+                      <small class="text-muted">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Esta información es requerida para el control de acceso al estacionamiento.
+                      </small>
+                    </div>
                   </div>
                 </div>
 
@@ -802,6 +987,7 @@
                     <li><strong>Check-in:</strong> Ahora</li>
                     <li><strong>Check-out esperado:</strong> {{ directRegistration.form.expected_checkout }}</li>
                     <li><strong>Total huéspedes:</strong> {{ getTotalGuestsCount() }}</li>
+                    <li v-if="directRegistration.form.needs_parking"><strong>Estacionamiento:</strong> Sí ({{ vehicleInfo.model }} - {{ vehicleInfo.license_plate }})</li>
                   </ul>
                 </div>
               </div>
@@ -866,7 +1052,10 @@
       <div class="modal-dialog modal-lg">
         <div class="modal-content">
           <div class="modal-header">
-            <h5 class="modal-title">Detalles del Registro</h5>
+            <h5 class="modal-title">
+              <i class="fas fa-info-circle me-2"></i>
+              Detalles del Registro
+            </h5>
             <button 
               type="button" 
               class="btn-close" 
@@ -989,6 +1178,8 @@
 </template>
 
 <script>
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
 import { adminApi, sharedApi } from '@/services/api'
 
 export default {
@@ -1039,6 +1230,12 @@ export default {
           additional_guests: [],
           notes: ''
         }
+      },
+      
+      // Información del vehículo
+      vehicleInfo: {
+        model: '',
+        license_plate: ''
       },
       
       // Usuarios y habitaciones
@@ -1194,6 +1391,296 @@ export default {
       return pages
     },
 
+    // Descargar PDF del check-in
+    async downloadCheckInPDF(registration) {
+      try {
+        const doc = new jsPDF()
+        const pageWidth = doc.internal.pageSize.width
+        const pageHeight = doc.internal.pageSize.height
+        
+        // Configuración de colores corporativos
+        const primaryColor = [13, 110, 253] // Azul bootstrap
+        const successColor = [25, 135, 84] // Verde bootstrap
+        const infoColor = [13, 202, 240] // Azul info
+        const darkColor = [33, 37, 41] // Negro bootstrap
+        const secondaryColor = [108, 117, 125] // Gris bootstrap
+        
+        // Header corporativo con fondo
+        doc.setFillColor(...primaryColor)
+        doc.rect(0, 0, pageWidth, 40, 'F')
+        
+        // Título principal
+        doc.setTextColor(255, 255, 255)
+        doc.setFontSize(22)
+        doc.setFont('helvetica', 'bold')
+        doc.text('COMPROBANTE DE CHECK-IN', pageWidth / 2, 20, { align: 'center' })
+        
+        // Subtítulo
+        doc.setFontSize(11)
+        doc.setFont('helvetica', 'normal')
+        doc.text('Confirmación de Ingreso Hotelero', pageWidth / 2, 30, { align: 'center' })
+        
+        // Información del hotel/sucursal
+        let yPos = 50
+        doc.setTextColor(...darkColor)
+        doc.setFontSize(16)
+        doc.setFont('helvetica', 'bold')
+        doc.text(registration.branch?.name || 'Hotel', 20, yPos)
+        
+        yPos += 8
+        doc.setFontSize(10)
+        doc.setFont('helvetica', 'normal')
+        doc.setTextColor(...secondaryColor)
+        doc.text(`Dirección: ${registration.branch?.address || 'Dirección no disponible'}`, 20, yPos)
+        
+        yPos += 5
+        doc.text(`Teléfono: ${registration.branch?.phone || 'Teléfono no disponible'}`, 20, yPos)
+        
+        // Fecha y hora de emisión (esquina superior derecha)
+        doc.setFontSize(9)
+        doc.setTextColor(...secondaryColor)
+        const currentDate = new Date().toLocaleDateString('es-BO', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        })
+        doc.text(`Fecha de emisión: ${currentDate}`, pageWidth - 20, 50, { align: 'right' })
+        
+        // Línea separadora
+        yPos += 15
+        doc.setLineWidth(0.8)
+        doc.setDrawColor(...primaryColor)
+        doc.line(20, yPos, pageWidth - 20, yPos)
+        
+        // Información del check-in en tabla
+        yPos += 10
+        
+        const checkInData = [
+          ['Código de Registro', registration.registration_code],
+          ['Estado', this.getStatusText(registration.status)],
+          ['Fecha y Hora de Check-in', this.formatDateTime(registration.actual_check_in)],
+          ['Fecha de Check-out Esperada', registration.expected_checkout ? this.formatDateTime(registration.expected_checkout) : 'No especificada'],
+          ['Huésped Principal', registration.user?.name || 'No especificado'],
+          ['Documento de Identidad', registration.user?.document_type ? `${registration.user.document_type.toUpperCase()}: ${registration.user.document_number}` : 'No especificado'],
+          ['Email', registration.user?.email || 'No especificado'],
+          ['Teléfono', registration.user?.phone || 'No especificado'],
+          ['Habitación', `${registration.room?.room_number || 'N/A'} - ${registration.room?.room_type?.name || 'Tipo no especificado'}`],
+          ['Capacidad de Habitación', `${registration.room?.room_type?.max_guests || 'N/A'} huéspedes`],
+          ['Precio por Noche', `Bs. ${registration.room?.price_per_night || '0.00'}`],
+          ['Total de Huéspedes', `${this.getTotalGuests(registration)} persona(s)`],
+          ['Estacionamiento', registration.needs_parking ? 'Sí (Incluido)' : 'No solicitado']
+        ]
+        
+        // Si hay reserva asociada, agregar información
+        if (registration.reservation) {
+          checkInData.push(['Reserva Asociada', registration.reservation.reservation_code])
+        }
+        
+        autoTable(doc, {
+          startY: yPos,
+          body: checkInData,
+          theme: 'striped',
+          styles: {
+            fontSize: 9,
+            cellPadding: 4,
+            lineColor: [224, 224, 224],
+            lineWidth: 0.1
+          },
+          columnStyles: {
+            0: { 
+              cellWidth: 60,
+              fontStyle: 'bold',
+              textColor: darkColor,
+              fillColor: [248, 249, 250]
+            },
+            1: { 
+              cellWidth: 110,
+              textColor: darkColor
+            }
+          },
+          alternateRowStyles: {
+            fillColor: [248, 249, 250]
+          }
+        })
+        
+        // Huéspedes adicionales
+        yPos = doc.lastAutoTable.finalY + 15
+        if (registration.additional_guests && registration.additional_guests.length > 0) {
+          doc.setFontSize(12)
+          doc.setFont('helvetica', 'bold')
+          doc.setTextColor(...darkColor)
+          doc.text('HUÉSPEDES ADICIONALES:', 20, yPos)
+          
+          yPos += 10
+          
+          const guestData = [
+            ['Nombre Completo', 'Tipo de Documento', 'Número de Documento']
+          ]
+          
+          registration.additional_guests.forEach(guest => {
+            guestData.push([
+              guest.name,
+              guest.document_type?.toUpperCase() || 'N/A',
+              guest.document_number || 'N/A'
+            ])
+          })
+          
+          autoTable(doc, {
+            startY: yPos,
+            head: [guestData[0]],
+            body: guestData.slice(1),
+            theme: 'grid',
+            styles: {
+              fontSize: 9,
+              cellPadding: 4,
+              lineColor: [224, 224, 224],
+              lineWidth: 0.5
+            },
+            headStyles: {
+              fillColor: infoColor,
+              textColor: [255, 255, 255],
+              fontStyle: 'bold',
+              fontSize: 10
+            },
+            columnStyles: {
+              0: { cellWidth: 70 },
+              1: { cellWidth: 50, halign: 'center' },
+              2: { cellWidth: 50, halign: 'center' }
+            }
+          })
+          
+          yPos = doc.lastAutoTable.finalY + 15
+        }
+        
+        // Notas adicionales
+        if (registration.notes) {
+          yPos += 5
+          doc.setFontSize(12)
+          doc.setFont('helvetica', 'bold')
+          doc.setTextColor(...darkColor)
+          doc.text('NOTAS ADICIONALES:', 20, yPos)
+          
+          yPos += 8
+          doc.setFontSize(10)
+          doc.setFont('helvetica', 'normal')
+          doc.setTextColor(...secondaryColor)
+          
+          const splitNotes = doc.splitTextToSize(registration.notes, pageWidth - 40)
+          splitNotes.forEach(line => {
+            doc.text(line, 20, yPos)
+            yPos += 5
+          })
+          
+          yPos += 5
+        }
+        
+        // Información importante
+        yPos += 10
+        doc.setFontSize(12)
+        doc.setFont('helvetica', 'bold')
+        doc.setTextColor(...darkColor)
+        doc.text('INFORMACIÓN IMPORTANTE:', 20, yPos)
+        
+        yPos += 8
+        doc.setFontSize(10)
+        doc.setFont('helvetica', 'normal')
+        doc.setTextColor(...secondaryColor)
+        
+        const importantInfo = [
+          '• Conservar este comprobante durante toda su estadía',
+          '• Presentar documento de identidad al personal cuando se solicite',
+          '• Respetar las políticas y reglamentos del hotel',
+          '• Check-out estándar: 12:00 PM (mediodía)',
+          '• Para servicios adicionales, contactar a recepción',
+          '• En caso de emergencia, comunicarse inmediatamente con el personal'
+        ]
+        
+        importantInfo.forEach(info => {
+          doc.text(info, 20, yPos)
+          yPos += 6
+        })
+        
+        // Sección de políticas
+        yPos += 10
+        doc.setFontSize(12)
+        doc.setFont('helvetica', 'bold')
+        doc.setTextColor(...darkColor)
+        doc.text('POLÍTICAS DEL HOTEL:', 20, yPos)
+        
+        yPos += 8
+        doc.setFontSize(10)
+        doc.setFont('helvetica', 'normal')
+        doc.setTextColor(...secondaryColor)
+        
+        const policies = [
+          '• Prohibido fumar en habitaciones y áreas comunes',
+          '• Mantener un ambiente de respeto y tranquilidad',
+          '• Responsabilidad por daños causados a la propiedad',
+          '• Registro de huéspedes adicionales requerido',
+          '• Cumplir con horarios de silencio (22:00 - 06:00)'
+        ]
+        
+        policies.forEach(policy => {
+          doc.text(policy, 20, yPos)
+          yPos += 6
+        })
+        
+        // Footer con información de contacto
+        yPos = pageHeight - 40
+        doc.setLineWidth(0.5)
+        doc.setDrawColor(...primaryColor)
+        doc.line(20, yPos, pageWidth - 20, yPos)
+        
+        yPos += 10
+        doc.setFontSize(11)
+        doc.setFont('helvetica', 'bold')
+        doc.setTextColor(...primaryColor)
+        doc.text('¡Bienvenido y disfrute su estadía!', pageWidth / 2, yPos, { align: 'center' })
+        
+        yPos += 8
+        doc.setFontSize(9)
+        doc.setFont('helvetica', 'normal')
+        doc.setTextColor(...secondaryColor)
+        doc.text('Para cualquier consulta o asistencia, no dude en contactarnos', pageWidth / 2, yPos, { align: 'center' })
+        
+        // Información del personal (si está disponible)
+        if (registration.created_by) {
+          yPos += 6
+          doc.setFontSize(8)
+          doc.text(`Procesado por: ${registration.created_by.name || 'Personal del hotel'}`, pageWidth / 2, yPos, { align: 'center' })
+        }
+        
+        // Guardar el PDF
+        doc.save(`CheckIn_${registration.registration_code}.pdf`)
+        
+      } catch (error) {
+        console.error('Error generating check-in PDF:', error)
+        alert('Error al generar el PDF. Inténtalo de nuevo.')
+      }
+    },
+
+    // Calcular duración de la estadía
+    getStayDuration(checkInDateTime) {
+      if (!checkInDateTime) return 'No disponible'
+      
+      const checkIn = new Date(checkInDateTime)
+      const now = new Date()
+      const diffTime = Math.abs(now - checkIn)
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
+      const diffHours = Math.floor((diffTime % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+      
+      if (diffDays > 0) {
+        return `${diffDays} día(s), ${diffHours} hora(s)`
+      } else if (diffHours > 0) {
+        return `${diffHours} hora(s)`
+      } else {
+        const diffMinutes = Math.floor((diffTime % (1000 * 60 * 60)) / (1000 * 60))
+        return `${diffMinutes} minuto(s)`
+      }
+    },
+
     // ===== FUNCIONES DE CHECK-OUT =====
 
     // Abrir modal de check-out
@@ -1238,26 +1725,6 @@ export default {
         hour: '2-digit',
         minute: '2-digit'
       })
-    },
-
-    // Calcular duración de la estadía
-    getStayDuration(checkInDateTime) {
-      if (!checkInDateTime) return 'No disponible'
-      
-      const checkIn = new Date(checkInDateTime)
-      const now = new Date()
-      const diffTime = Math.abs(now - checkIn)
-      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
-      const diffHours = Math.floor((diffTime % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
-      const diffMinutes = Math.floor((diffTime % (1000 * 60 * 60)) / (1000 * 60))
-      
-      if (diffDays > 0) {
-        return `${diffDays} día(s), ${diffHours} hora(s)`
-      } else if (diffHours > 0) {
-        return `${diffHours} hora(s), ${diffMinutes} minuto(s)`
-      } else {
-        return `${diffMinutes} minuto(s)`
-      }
     },
 
     // Procesar check-out
@@ -1345,6 +1812,10 @@ export default {
         needs_parking: false,
         additional_guests: [],
         notes: ''
+      }
+      this.vehicleInfo = {
+        model: '',
+        license_plate: ''
       }
       this.userSearch = ''
       this.foundUsers = []
@@ -1461,8 +1932,10 @@ export default {
       const hasRoom = !!this.directRegistration.form.room_id
       const hasCheckout = !!this.directRegistration.form.expected_checkout
       const hasAdults = this.directRegistration.form.adults_count > 0
+      const hasVehicleInfo = !this.directRegistration.form.needs_parking || 
+                            (this.vehicleInfo.model && this.vehicleInfo.license_plate)
       
-      return hasUser && hasBranch && hasRoom && hasCheckout && hasAdults
+      return hasUser && hasBranch && hasRoom && hasCheckout && hasAdults && hasVehicleInfo
     },
     
     // Huéspedes adicionales
@@ -1479,81 +1952,92 @@ export default {
     },
     
     // Crear registro directo
-    // Crear registro directo
-  async submitDirectRegistration() {
-    if (!this.canSubmit()) return
-    
-    this.submitting = true
-    
-    try {
-      // Preparar datos para el registro directo
-      const registrationData = {
-        ...this.directRegistration.form
-      }
+    async submitDirectRegistration() {
+      if (!this.canSubmit()) return
+      
+      this.submitting = true
+      
+      try {
+        // Preparar datos para el registro directo
+        const registrationData = {
+          ...this.directRegistration.form
+        }
 
-      // Si hay un nuevo usuario, incluir sus datos en lugar de crear por separado
-      if (this.showNewUserForm && this.isNewUserFormValid() && !this.directRegistration.form.user_id) {
-        registrationData.new_user = {
-          name: this.newUser.name,
-          email: this.newUser.email,
-          document_type: this.newUser.document_type,
-          document_number: this.newUser.document_number,
-          phone: this.newUser.phone || null
+        // Si hay un nuevo usuario, incluir sus datos en lugar de crear por separado
+        if (this.showNewUserForm && this.isNewUserFormValid() && !this.directRegistration.form.user_id) {
+          registrationData.new_user = {
+            name: this.newUser.name,
+            email: this.newUser.email,
+            document_type: this.newUser.document_type,
+            document_number: this.newUser.document_number,
+            phone: this.newUser.phone || null
+          }
+          // Quitar user_id para que el backend sepa que debe crear usuario
+          delete registrationData.user_id
         }
-        // Quitar user_id para que el backend sepa que debe crear usuario
-        delete registrationData.user_id
-      }
-      
-      console.log('Creating direct registration with data:', registrationData)
-      
-      const response = await adminApi.createDirectRegistration(registrationData)
-      
-      if (response.data.success) {
-        // Mostrar mensaje de éxito
-        let message = 'Registro directo creado exitosamente'
-        if (response.data.data.user_created) {
-          message += '\n(Se creó un nuevo usuario)'
+
+        // Agregar información del vehículo si es necesario (solo para validación en frontend)
+        if (this.directRegistration.form.needs_parking) {
+          registrationData.vehicle_info = {
+            model: this.vehicleInfo.model,
+            license_plate: this.vehicleInfo.license_plate
+          }
         }
+        
+        console.log('Creating direct registration with data:', registrationData)
+        
+        const response = await adminApi.createDirectRegistration(registrationData)
+        
+        if (response.data.success) {
+          // Mostrar mensaje de éxito
+          let message = 'Registro directo creado exitosamente'
+          if (response.data.data.user_created) {
+            message += '\n(Se creó un nuevo usuario)'
+          }
+          if (this.directRegistration.form.needs_parking) {
+            message += `\n(Vehículo registrado: ${this.vehicleInfo.model} - ${this.vehicleInfo.license_plate})`
+          }
+          alert(message)
+          
+          // Cerrar modal
+          this.showDirectRegistrationModal = false
+          
+          // Recargar registros
+          this.fetchRegistrations()
+        } else {
+          throw new Error(response.data.message || 'Error al crear el registro')
+        }
+      } catch (error) {
+        console.error('Error creating direct registration:', error)
+        let message = 'Error al crear el registro directo'
+        
+        if (error.response?.data?.errors) {
+          // Errores de validación específicos
+          const errors = error.response.data.errors
+          const errorMessages = []
+          
+          Object.keys(errors).forEach(field => {
+            errorMessages.push(`${field}: ${errors[field].join(', ')}`)
+          })
+          
+          message = 'Errores de validación:\n' + errorMessages.join('\n')
+        } else if (error.response?.data?.message) {
+          message = error.response.data.message
+        } else if (error.message) {
+          message = error.message
+        }
+        
+        // Mostrar información adicional de debug si está disponible
+        if (error.response?.data?.debug) {
+          console.error('Debug info:', error.response.data.debug)
+        }
+        
         alert(message)
-        
-        // Cerrar modal
-        this.showDirectRegistrationModal = false
-        
-        // Recargar registros
-        this.fetchRegistrations()
-      } else {
-        throw new Error(response.data.message || 'Error al crear el registro')
+      } finally {
+        this.submitting = false
       }
-    } catch (error) {
-      console.error('Error creating direct registration:', error)
-      let message = 'Error al crear el registro directo'
-      
-      if (error.response?.data?.errors) {
-        // Errores de validación específicos
-        const errors = error.response.data.errors
-        const errorMessages = []
-        
-        Object.keys(errors).forEach(field => {
-          errorMessages.push(`${field}: ${errors[field].join(', ')}`)
-        })
-        
-        message = 'Errores de validación:\n' + errorMessages.join('\n')
-      } else if (error.response?.data?.message) {
-        message = error.response.data.message
-      } else if (error.message) {
-        message = error.message
-      }
-      
-      // Mostrar información adicional de debug si está disponible
-      if (error.response?.data?.debug) {
-        console.error('Debug info:', error.response.data.debug)
-      }
-      
-      alert(message)
-    } finally {
-      this.submitting = false
-    }
-  },
+    },
+    
     // Ver detalles del registro
     async viewRegistration(registration) {
       try {
@@ -1566,12 +2050,6 @@ export default {
         console.error('Error fetching registration details:', error)
         alert('Error al cargar detalles del registro')
       }
-    },
-    
-    // Editar registro
-    editRegistration(registration) {
-      // TODO: Implementar modal de edición
-      console.log('Edit registration:', registration)
     },
     
     // Utilidades de formato
@@ -1587,14 +2065,35 @@ export default {
         minute: '2-digit'
       })
     },
+
+    formatDate(dateTime) {
+      if (!dateTime) return '-'
+      
+      const date = new Date(dateTime)
+      return date.toLocaleDateString('es-ES', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      })
+    },
+
+    formatTime(dateTime) {
+      if (!dateTime) return '-'
+      
+      const date = new Date(dateTime)
+      return date.toLocaleTimeString('es-ES', {
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    },
     
     getStatusClass(status) {
       const classes = {
-        active: 'bg-success',
-        completed: 'bg-secondary',
-        cancelled: 'bg-danger'
+        active: 'badge bg-success',
+        completed: 'badge bg-secondary',
+        cancelled: 'badge bg-danger'
       }
-      return classes[status] || 'bg-warning'
+      return classes[status] || 'badge bg-warning'
     },
     
     getStatusText(status) {
@@ -1652,68 +2151,648 @@ export default {
 </script>
 
 <style scoped>
-.cursor-pointer {
-  cursor: pointer;
+/* Variables CSS */
+:root {
+  --primary-color: #0d6efd;
+  --success-color: #198754;
+  --warning-color: #ffc107;
+  --danger-color: #dc3545;
+  --info-color: #0dcaf0;
+  --secondary-color: #6c757d;
+  --light-gray: #f8f9fa;
+  --border-color: #dee2e6;
+  --text-muted: #6c757d;
+  --shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+  --shadow-hover: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
 }
 
-.card:hover {
-  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+/* Header Section */
+.header-section {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 16px;
+  padding: 2rem;
+  color: white;
+  margin-bottom: 2rem;
 }
 
-.list-group-item:hover {
-  background-color: #f8f9fa;
+.main-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.table th {
-  border-top: none;
+.subtitle {
+  font-size: 1.1rem;
+  opacity: 0.9;
+  margin-bottom: 0;
 }
 
-.spinner-border-sm {
-  width: 1rem;
-  height: 1rem;
+.btn-create {
+  background: rgba(255, 255, 255, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
 }
 
-.modal-lg {
-  max-width: 900px;
+.btn-create:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
 }
 
-.badge {
-  font-size: 0.75em;
+/* Stats Cards */
+.stats-card {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: var(--shadow);
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
 }
 
-.btn-group .btn {
-  margin-right: 2px;
+.stats-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-hover);
 }
 
-.alert {
+.stats-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1.5rem;
+}
+
+.stats-content h4 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+  color: #2c3e50;
+}
+
+.stats-content p {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin-bottom: 0;
+}
+
+/* Modern Cards */
+.modern-card {
+  border: none;
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  transition: all 0.3s ease;
+}
+
+.modern-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-hover);
+}
+
+.modern-card .card-header {
+  border-radius: 12px 12px 0 0 !important;
+  border-bottom: none;
+  padding: 1rem 1.5rem;
+}
+
+.modern-card .card-body {
+  padding: 1.5rem;
+}
+
+/* Tabla de registros */
+.registration-table {
+  font-size: 0.9rem;
+}
+
+.table-header {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-bottom: 2px solid var(--border-color);
+}
+
+.table-header th {
+  font-weight: 600;
+  color: #2c3e50;
+  padding: 1rem 0.75rem;
+  border-bottom: none;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.registration-row {
+  transition: all 0.3s ease;
+  border-bottom: 1px solid var(--light-gray);
+}
+
+.registration-row:hover {
+  background-color: rgba(13, 110, 253, 0.05);
+  transform: translateY(-1px);
+}
+
+.registration-row td {
+  padding: 1rem 0.75rem;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--light-gray);
+}
+
+/* Registration Code */
+.registration-code {
+  font-size: 0.9rem;
+  color: #2c3e50;
+  font-weight: 600;
+}
+
+.reservation-tag {
+  margin-top: 0.25rem;
+  color: var(--info-color);
+  font-size: 0.75rem;
+}
+
+/* Client Info */
+.client-info {
+  line-height: 1.4;
+}
+
+.client-name {
+  font-size: 0.9rem;
+  color: #2c3e50;
+  margin-bottom: 0.25rem;
+}
+
+.client-details {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+/* Room Info */
+.room-info {
+  line-height: 1.4;
+}
+
+.room-number {
+  font-size: 0.9rem;
+  color: #2c3e50;
+  margin-bottom: 0.25rem;
+}
+
+.room-details {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+/* Date Info */
+.date-info {
+  line-height: 1.4;
+}
+
+.date-value {
+  font-size: 0.85rem;
+  color: #2c3e50;
+  margin-bottom: 0.25rem;
+}
+
+.time-value {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.stay-duration {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* Guests Info */
+.guests-info {
+  text-align: center;
+}
+
+/* Action Buttons */
+.action-buttons {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100px;
+}
+
+.action-btn {
+  min-width: 90px;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.8rem;
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+}
+
+.action-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  border-color: currentColor;
+}
+
+.action-btn.btn-primary {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+  color: white;
+}
+
+.action-btn.btn-primary:hover {
+  background-color: #0b5ed7;
+  border-color: #0b5ed7;
+}
+
+.action-btn.btn-info {
+  background-color: var(--info-color);
+  border-color: var(--info-color);
+  color: white;
+}
+
+.action-btn.btn-info:hover {
+  background-color: #0bb2d4;
+  border-color: #0bb2d4;
+}
+
+.action-btn.btn-warning {
+  background-color: var(--warning-color);
+  border-color: var(--warning-color);
+  color: #212529;
+}
+
+.action-btn.btn-warning:hover {
+  background-color: #e0a800;
+  border-color: #e0a800;
+}
+
+.action-btn.btn-success {
+  background-color: var(--success-color);
+  border-color: var(--success-color);
+  color: white;
+}
+
+.action-btn.btn-success:hover {
+  background-color: #157347;
+  border-color: #157347;
+}
+
+.action-btn i {
+  font-size: 0.85rem;
+}
+
+.btn-text {
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.action-buttons .dropdown-menu {
+  border: none;
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
   border-radius: 8px;
 }
 
-.card {
-  border-radius: 10px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+.action-buttons .dropdown-item {
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+  transition: all 0.3s ease;
+}
+
+.action-buttons .dropdown-item:hover {
+  background-color: rgba(13, 110, 253, 0.1);
+}
+
+/* Loading Section */
+.loading-section {
+  background: white;
+  border-radius: 12px;
+  margin: 2rem 0;
+}
+
+/* Empty State */
+.empty-state {
+  background: white;
+  border-radius: 16px;
+  padding: 3rem;
+  text-align: center;
+  margin: 2rem 0;
+}
+
+.empty-icon {
+  font-size: 4rem;
+  color: var(--text-muted);
+  margin-bottom: 1.5rem;
+}
+
+.empty-title {
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 1rem;
+}
+
+.empty-description {
+  font-size: 1.1rem;
+  color: var(--text-muted);
+  margin-bottom: 2rem;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.empty-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* Pagination */
+.pagination-section {
+  background: white;
+  border-radius: 12px;
+  padding: 1rem 1.5rem;
+  box-shadow: var(--shadow);
+}
+
+.pagination-info {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.pagination .page-link {
+  border-radius: 8px;
+  margin: 0 2px;
+  border: 1px solid var(--border-color);
+  padding: 0.5rem 0.75rem;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.pagination .page-link:hover {
+  background-color: var(--primary-color);
+  color: white;
+  transform: translateY(-1px);
+}
+
+.pagination .page-item.active .page-link {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+/* Forms */
+.form-control,
+.form-select {
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  padding: 0.75rem 1rem;
+  transition: all 0.3s ease;
 }
 
 .form-control:focus,
 .form-select:focus {
-  border-color: #0d6efd;
+  border-color: var(--primary-color);
   box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
 }
 
-/* Estilos específicos para el modal de check-out */
-.modal-header .modal-title i {
-  font-size: 1.2em;
+.form-label {
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 0.5rem;
 }
 
-.card.bg-light {
-  background-color: #f8f9fa !important;
+/* Filter Actions */
+.filter-actions {
+  display: flex;
+  gap: 0.5rem;
+  width: 100%;
 }
 
-.card.border-success {
-  border-color: #198754 !important;
+.filter-btn {
+  flex: 1;
+  padding: 0.625rem 1rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 2px solid;
+  min-height: 42px;
 }
 
-.card.border-warning {
-  border-color: #ffc107 !important;
+.filter-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.filter-btn.btn-outline-secondary {
+  color: var(--danger-color);
+  border-color: var(--danger-color);
+}
+
+.filter-btn.btn-outline-secondary:hover {
+  background-color: var(--danger-color);
+  border-color: var(--danger-color);
+  color: white;
+}
+
+.filter-btn.btn-outline-primary {
+  color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.filter-btn.btn-outline-primary:hover {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+  color: white;
+}
+
+.filter-btn i {
+  font-size: 0.9rem;
+}
+
+.filter-btn .btn-text {
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+/* Modals */
+.modal-content {
+  border-radius: 12px;
+  border: none;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+}
+
+.modal-header {
+  border-bottom: 1px solid var(--border-color);
+  padding: 1rem 1.5rem;
+}
+
+.modal-body {
+  padding: 1.5rem;
+}
+
+.modal-footer {
+  border-top: 1px solid var(--border-color);
+  padding: 1rem 1.5rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .header-section {
+    padding: 1.5rem;
+    text-align: center;
+  }
+
+  .main-title {
+    font-size: 2rem;
+  }
+
+  .btn-create {
+    margin-top: 1rem;
+  }
+
+  .stats-card {
+    margin-bottom: 1rem;
+  }
+
+  .registration-table {
+    font-size: 0.8rem;
+  }
+
+  .table-header th {
+    padding: 0.75rem 0.5rem;
+    font-size: 0.75rem;
+  }
+
+  .registration-row td {
+    padding: 0.75rem 0.5rem;
+  }
+
+  .action-btn {
+    min-width: 70px;
+    padding: 0.375rem 0.5rem;
+    font-size: 0.75rem;
+  }
+
+  .btn-text {
+    font-size: 0.7rem;
+  }
+
+  .action-buttons {
+    min-height: 80px;
+  }
+
+  .filter-actions {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .filter-btn {
+    min-height: 38px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8rem;
+  }
+
+  .filter-btn .btn-text {
+    font-size: 0.8rem;
+  }
+
+  .empty-actions {
+    flex-direction: column;
+  }
+
+  .pagination-section {
+    flex-direction: column;
+    gap: 1rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .table-responsive {
+    font-size: 0.75rem;
+  }
+
+  .action-btn {
+    min-width: 50px;
+    padding: 0.25rem 0.375rem;
+  }
+
+  .btn-text {
+    display: none;
+  }
+
+  .action-btn i {
+    font-size: 0.9rem;
+  }
+
+  .action-buttons {
+    min-height: 70px;
+  }
+
+  .filter-btn .btn-text {
+    display: none;
+  }
+
+  .filter-btn {
+    min-height: 36px;
+    padding: 0.375rem 0.5rem;
+  }
+
+  .filter-btn i {
+    font-size: 1rem;
+  }
+}
+
+/* Utility Classes */
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.text-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rounded-3 {
+  border-radius: 12px !important;
+}
+
+/* Tabla responsive mejorada */
+@media (max-width: 992px) {
+  .registration-table th:nth-child(6),
+  .registration-table td:nth-child(6) {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .registration-table th:nth-child(4),
+  .registration-table td:nth-child(4),
+  .registration-table th:nth-child(5),
+  .registration-table td:nth-child(5) {
+    display: none;
+  }
+}
+
+@media (max-width: 576px) {
+  .registration-table th:nth-child(7),
+  .registration-table td:nth-child(7) {
+    display: none;
+  }
 }
 </style>

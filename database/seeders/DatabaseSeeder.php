@@ -12,7 +12,6 @@ class DatabaseSeeder extends Seeder
             RolePermissionSeeder::class,
             BranchSeeder::class,
             RoomTypeSeeder::class,
-            RoomSeeder::class,
             ServiceSeeder::class,
             UserSeeder::class,
         ]);

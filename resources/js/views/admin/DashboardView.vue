@@ -1,263 +1,362 @@
 <template>
-  <div class="container-fluid py-4">
-    <div class="row">
-      <div class="col-12">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-          <h2>Panel de Administración</h2>
-          <span class="text-muted">Bienvenido, {{ authStore.userName }}</span>
-        </div>
-
-        <!-- Estadísticas principales -->
-        <div class="row mb-4">
-          <div class="col-lg-3 col-md-6 mb-3">
-            <div class="card text-center bg-primary text-white">
-              <div class="card-body">
-                <i class="pi pi-calendar mb-2" style="font-size: 2rem;"></i>
-                <h4>{{ stats.totalReservations }}</h4>
-                <p class="mb-0">Reservas Totales</p>
-              </div>
-            </div>
+  <div class="admin-dashboard">
+    <div class="container-xl">
+      <!-- Header profesional con gradiente -->
+      <div class="welcome-section">
+        <div class="welcome-content">
+          <div class="welcome-text">
+            <h2 class="welcome-title">¡Bienvenido, {{ authStore.userName }}! 👋</h2>
+            <p class="welcome-subtitle">Panel de control administrativo - {{ currentDate }}</p>
           </div>
-          
-          <div class="col-lg-3 col-md-6 mb-3">
-            <div class="card text-center bg-success text-white">
-              <div class="card-body">
-                <i class="pi pi-check-circle mb-2" style="font-size: 2rem;"></i>
-                <h4>{{ stats.confirmedReservations }}</h4>
-                <p class="mb-0">Confirmadas</p>
-              </div>
-            </div>
-          </div>
-          
-          <div class="col-lg-3 col-md-6 mb-3">
-            <div class="card text-center bg-warning text-white">
-              <div class="card-body">
-                <i class="pi pi-clock mb-2" style="font-size: 2rem;"></i>
-                <h4>{{ stats.pendingPayments }}</h4>
-                <p class="mb-0">Pagos Pendientes</p>
-              </div>
-            </div>
-          </div>
-          
-          <div class="col-lg-3 col-md-6 mb-3">
-            <div class="card text-center bg-info text-white">
-              <div class="card-body">
-                <i class="pi pi-home mb-2" style="font-size: 2rem;"></i>
-                <h4>{{ stats.availableRooms }}</h4>
-                <p class="mb-0">Habitaciones Disponibles</p>
-              </div>
-            </div>
+          <div class="welcome-actions">
+            <button @click="refreshData" class="btn btn-refresh" :disabled="loading">
+              <i class="pi pi-refresh"></i>
+              <span v-if="loading">Actualizando...</span>
+              <span v-else>Actualizar</span>
+            </button>
+            <button @click="navigateTo('admin.reports')" class="btn btn-primary">
+              <i class="pi pi-chart-bar"></i>
+              Reportes
+            </button>
           </div>
         </div>
+      </div>
 
-        <!-- Acciones rápidas principales -->
-        <div class="row mb-4">
-          <div class="col-12">
-            <div class="card">
-              <div class="card-header">
-                <h5 class="mb-0">Acciones Rápidas</h5>
+      <!-- Métricas principales con diseño profesional -->
+      <div class="metrics-section">
+        <div class="metrics-grid">
+          <div class="metric-card reservations">
+            <div class="metric-icon">
+              <i class="pi pi-calendar"></i>
+            </div>
+            <div class="metric-content">
+              <div class="metric-value">{{ stats.totalReservations }}</div>
+              <div class="metric-label">Reservas Totales</div>
+              <div class="metric-change positive">
+                <i class="pi pi-arrow-up"></i>
+                +12.5%
               </div>
-              <div class="card-body">
-                <div class="row">
-                  <div class="col-md-6 col-lg-3 mb-3">
-                    <button class="btn btn-outline-primary w-100" @click="navigateTo('admin.users')">
-                      <i class="pi pi-users"></i> Gestionar Usuarios
-                    </button>
-                  </div>
-                  <div class="col-md-6 col-lg-3 mb-3">
-                    <button class="btn btn-outline-success w-100" @click="navigateTo('admin.rooms')">
-                      <i class="pi pi-home"></i> Gestionar Habitaciones
-                    </button>
-                  </div>
-                  <div class="col-md-6 col-lg-3 mb-3">
-                    <button class="btn btn-outline-warning w-100" @click="navigateTo('admin.payments.pending')">
-                      <i class="pi pi-credit-card"></i> Validar Pagos
-                    </button>
-                  </div>
-                  <div class="col-md-6 col-lg-3 mb-3">
-                    <button class="btn btn-outline-info w-100" @click="navigateTo('admin.reports')">
-                      <i class="pi pi-chart-bar"></i> Generar Reportes
-                    </button>
-                  </div>
-                </div>
+            </div>
+          </div>
+
+          <div class="metric-card confirmed">
+            <div class="metric-icon">
+              <i class="pi pi-check-circle"></i>
+            </div>
+            <div class="metric-content">
+              <div class="metric-value">{{ stats.confirmedReservations }}</div>
+              <div class="metric-label">Confirmadas</div>
+              <div class="metric-change positive">
+                <i class="pi pi-arrow-up"></i>
+                +8.2%
+              </div>
+            </div>
+          </div>
+
+          <div class="metric-card pending">
+            <div class="metric-icon">
+              <i class="pi pi-clock"></i>
+            </div>
+            <div class="metric-content">
+              <div class="metric-value">{{ stats.pendingPayments }}</div>
+              <div class="metric-label">Pagos Pendientes</div>
+              <div class="metric-change warning">
+                <i class="pi pi-exclamation-triangle"></i>
+                Requiere atención
+              </div>
+            </div>
+          </div>
+
+          <div class="metric-card rooms">
+            <div class="metric-icon">
+              <i class="pi pi-home"></i>
+            </div>
+            <div class="metric-content">
+              <div class="metric-value">{{ stats.availableRooms }}</div>
+              <div class="metric-label">Habitaciones Disponibles</div>
+              <div class="metric-change neutral">
+                <i class="pi pi-minus"></i>
+                Sin cambios
               </div>
             </div>
           </div>
         </div>
+      </div>
 
-        <!-- Acciones adicionales -->
-        <div class="row mb-4">
-          <div class="col-12">
-            <div class="card">
-              <div class="card-header">
-                <h5 class="mb-0">Gestión del Sistema</h5>
-              </div>
-              <div class="card-body">
-                <div class="row">
-                  <div class="col-md-6 col-lg-3 mb-3">
-                    <button class="btn btn-outline-secondary w-100" @click="navigateTo('admin.reservations')">
-                      <i class="pi pi-calendar"></i> Todas las Reservas
-                    </button>
+      <div class="dashboard-content">
+        <!-- Área principal -->
+        <div class="main-content">
+          <!-- Acciones principales con diseño profesional -->
+          <div class="card">
+            <div class="card-header">
+              <h5 class="card-title">
+                <i class="pi pi-bolt"></i>
+                Acciones Principales
+              </h5>
+            </div>
+            <div class="card-body">
+              <div class="actions-grid">
+                <div class="action-card" @click="navigateTo('admin.users')">
+                  <div class="action-icon bg-primary">
+                    <i class="pi pi-users"></i>
                   </div>
-                  <div class="col-md-6 col-lg-3 mb-3">
-                    <button class="btn btn-outline-secondary w-100" @click="navigateTo('admin.room-types')">
-                      <i class="pi pi-th-large"></i> Tipos de Habitación
-                    </button>
-                  </div>
-                  <div class="col-md-6 col-lg-3 mb-3">
-                    <button class="btn btn-outline-secondary w-100" @click="navigateTo('admin.branches')">
-                      <i class="pi pi-building"></i> Sucursales
-                    </button>
-                  </div>
-                  <div class="col-md-6 col-lg-3 mb-3">
-                    <button class="btn btn-outline-secondary w-100" @click="navigateTo('admin.services')">
-                      <i class="pi pi-cog"></i> Servicios
-                    </button>
+                  <div class="action-content">
+                    <h6>Gestionar Usuarios</h6>
+                    <p>Administrar clientes y usuarios</p>
                   </div>
                 </div>
-                <div class="row">
-                  <div class="col-md-6 col-lg-3 mb-3">
-                    <button class="btn btn-outline-secondary w-100" @click="navigateTo('admin.payments')">
-                      <i class="pi pi-money-bill"></i> Historial de Pagos
-                    </button>
+
+                <div class="action-card" @click="navigateTo('admin.rooms')">
+                  <div class="action-icon bg-success">
+                    <i class="pi pi-home"></i>
                   </div>
-                  <div class="col-md-6 col-lg-3 mb-3">
-                    <button class="btn btn-outline-secondary w-100" @click="navigateTo('admin.registrations')">
-                      <i class="pi pi-user-plus"></i> Registros
-                    </button>
+                  <div class="action-content">
+                    <h6>Gestionar Habitaciones</h6>
+                    <p>Administrar habitaciones</p>
                   </div>
-                  <div class="col-md-6 col-lg-3 mb-3">
-                    <button class="btn btn-outline-secondary w-100" @click="navigateTo('admin.settings')">
-                      <i class="pi pi-cog"></i> Configuraciones
-                    </button>
+                </div>
+
+                <div class="action-card" @click="navigateTo('admin.registrations')">
+                  <div class="action-icon bg-warning">
+                    <i class="pi pi-credit-card"></i>
                   </div>
-                  <div class="col-md-6 col-lg-3 mb-3">
-                    <button class="btn btn-outline-dark w-100" @click="navigateTo('admin.reports')">
-                      <i class="pi pi-file-pdf"></i> Reportes Detallados
-                    </button>
+                  <div class="action-content">
+                    <h6>Registro de ingresos</h6>
+                    <p>Revisar ingresos</p>
+                    
+                  </div>
+                </div>
+
+                <div class="action-card" @click="navigateTo('admin.reports')">
+                  <div class="action-icon bg-info">
+                    <i class="pi pi-chart-bar"></i>
+                  </div>
+                  <div class="action-content">
+                    <h6>Generar Reportes</h6>
+                    <p>Informes y estadísticas</p>
+                  </div>
+                </div>
+
+                <div class="action-card" @click="navigateTo('admin.reservations')">
+                  <div class="action-icon bg-purple">
+                    <i class="pi pi-calendar"></i>
+                  </div>
+                  <div class="action-content">
+                    <h6>Todas las Reservas</h6>
+                    <p>Gestionar reservas</p>
+                  </div>
+                </div>
+
+                <div class="action-card" @click="navigateTo('admin.branches')">
+                  <div class="action-icon bg-teal">
+                    <i class="pi pi-building"></i>
+                  </div>
+                  <div class="action-content">
+                    <h6>Sucursales</h6>
+                    <p>Administrar ubicaciones</p>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <!-- Información de sucursales -->
-        <div class="row mb-4">
-          <div class="col-lg-6 mb-3">
-            <div class="card">
-              <div class="card-header">
-                <h5 class="mb-0">Sucursal Villa Caluyo</h5>
-              </div>
-              <div class="card-body">
-                <div class="row">
-                  <div class="col-6">
-                    <div class="text-center">
-                      <h4 class="text-success">{{ branchStats.villa_caluyo.available }}</h4>
-                      <small class="text-muted">Disponibles</small>
-                    </div>
-                  </div>
-                  <div class="col-6">
-                    <div class="text-center">
-                      <h4 class="text-danger">{{ branchStats.villa_caluyo.occupied }}</h4>
-                      <small class="text-muted">Ocupadas</small>
-                    </div>
-                  </div>
-                </div>
-              </div>
+          <!-- Actividad reciente profesional -->
+          <div class="card">
+            <div class="card-header">
+              <h5 class="card-title">
+                <i class="pi pi-history"></i>
+                Actividad Reciente
+              </h5>
+              <button @click="navigateTo('admin.activity')" class="btn btn-sm btn-outline-primary">
+                Ver Todo
+              </button>
             </div>
-          </div>
-          
-          <div class="col-lg-6 mb-3">
-            <div class="card">
-              <div class="card-header">
-                <h5 class="mb-0">Sucursal Cruce Villa Adela</h5>
-              </div>
-              <div class="card-body">
-                <div class="row">
-                  <div class="col-6">
-                    <div class="text-center">
-                      <h4 class="text-success">{{ branchStats.villa_adela.available }}</h4>
-                      <small class="text-muted">Disponibles</small>
-                    </div>
-                  </div>
-                  <div class="col-6">
-                    <div class="text-center">
-                      <h4 class="text-danger">{{ branchStats.villa_adela.occupied }}</h4>
-                      <small class="text-muted">Ocupadas</small>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Accesos rápidos a alertas -->
-        <div class="row mb-4">
-          <div class="col-12">
-            <div class="card">
-              <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Accesos Rápidos</h5>
-                <div>
-                  <button class="btn btn-sm btn-outline-primary me-2" @click="navigateTo('admin.payments.pending')">
-                    <i class="pi pi-clock"></i> Pagos Pendientes ({{ stats.pendingPayments }})
-                  </button>
-                  <button class="btn btn-sm btn-outline-success" @click="navigateTo('admin.reservations')">
-                    <i class="pi pi-calendar"></i> Ver Todas las Reservas
-                  </button>
-                </div>
-              </div>
-              <div class="card-body">
-                <div class="row">
-                  <div class="col-md-4 mb-3">
-                    <div class="border rounded p-3 text-center">
-                      <i class="pi pi-clock text-warning mb-2" style="font-size: 1.5rem;"></i>
-                      <h6>Check-ins Hoy</h6>
-                      <span class="badge bg-warning">{{ stats.checkInsToday || 0 }}</span>
-                    </div>
-                  </div>
-                  <div class="col-md-4 mb-3">
-                    <div class="border rounded p-3 text-center">
-                      <i class="pi pi-sign-out text-info mb-2" style="font-size: 1.5rem;"></i>
-                      <h6>Check-outs Hoy</h6>
-                      <span class="badge bg-info">{{ stats.checkOutsToday || 0 }}</span>
-                    </div>
-                  </div>
-                  <div class="col-md-4 mb-3">
-                    <div class="border rounded p-3 text-center">
-                      <i class="pi pi-exclamation-triangle text-danger mb-2" style="font-size: 1.5rem;"></i>
-                      <h6>Reservas Vencidas</h6>
-                      <span class="badge bg-danger">{{ stats.expiredReservations || 0 }}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Alertas importantes -->
-        <div class="row">
-          <div class="col-12">
-            <div class="card">
-              <div class="card-header">
-                <h5 class="mb-0">Alertas y Notificaciones</h5>
-              </div>
-              <div class="card-body">
-                <div v-if="alerts.length > 0">
-                  <div v-for="alert in alerts" :key="alert.id" :class="getAlertClass(alert.type)" class="mb-2">
+            <div class="card-body">
+              <div class="activity-timeline">
+                <div v-for="alert in alerts" :key="alert.id" class="activity-item">
+                  <div class="activity-icon" :class="`bg-${getActivityType(alert.type)}`">
                     <i :class="getAlertIcon(alert.type)"></i>
-                    {{ alert.message }}
-                    <button v-if="alert.action" class="btn btn-sm btn-outline-secondary ms-2" @click="navigateTo(alert.action)">
-                      Ver más
-                    </button>
+                  </div>
+                  <div class="activity-content">
+                    <div class="activity-header">
+                      <span class="activity-title">{{ getActivityTitle(alert.type) }}</span>
+                      <span class="activity-time">{{ formatTimeAgo(alert.timestamp) }}</span>
+                    </div>
+                    <p class="activity-description">{{ alert.message }}</p>
                   </div>
                 </div>
-                <div v-else class="text-center text-muted">
-                  <i class="pi pi-check-circle text-success" style="font-size: 2rem;"></i>
-                  <p class="mt-2 mb-0">No hay alertas pendientes</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Acciones adicionales -->
+          <div class="card">
+            <div class="card-header">
+              <h5 class="card-title">
+                <i class="pi pi-cog"></i>
+                Gestión del Sistema
+              </h5>
+            </div>
+            <div class="card-body">
+              <div class="secondary-actions">
+                <button @click="navigateTo('admin.room-types')" class="secondary-action">
+                  <i class="pi pi-th-large"></i>
+                  <span>Tipos de Habitación</span>
+                </button>
+                <button @click="navigateTo('admin.services')" class="secondary-action">
+                  <i class="pi pi-cog"></i>
+                  <span>Servicios</span>
+                </button>
+                <button @click="navigateTo('admin.payments')" class="secondary-action">
+                  <i class="pi pi-money-bill"></i>
+                  <span>Historial de Pagos</span>
+                </button>
+                <button @click="navigateTo('admin.registrations')" class="secondary-action">
+                  <i class="pi pi-user-plus"></i>
+                  <span>Registros</span>
+                </button>
+                <button @click="navigateTo('admin.settings')" class="secondary-action">
+                  <i class="pi pi-cog"></i>
+                  <span>Configuraciones</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sidebar profesional -->
+        <div class="sidebar-content">
+          <!-- Resumen de hoy -->
+          <div class="card">
+            <div class="card-header">
+              <h5 class="card-title">
+                <i class="pi pi-calendar-check"></i>
+                Resumen de Hoy
+              </h5>
+            </div>
+            <div class="card-body">
+              <div class="quick-stats">
+                <div class="stat-item">
+                  <div class="stat-icon bg-primary">
+                    <i class="pi pi-sign-in"></i>
+                  </div>
+                  <div class="stat-info">
+                    <div class="stat-value">{{ stats.checkInsToday || 0 }}</div>
+                    <div class="stat-label">Check-ins Hoy</div>
+                  </div>
                 </div>
+
+                <div class="stat-item">
+                  <div class="stat-icon bg-warning">
+                    <i class="pi pi-sign-out"></i>
+                  </div>
+                  <div class="stat-info">
+                    <div class="stat-value">{{ stats.checkOutsToday || 0 }}</div>
+                    <div class="stat-label">Check-outs Hoy</div>
+                  </div>
+                </div>
+
+                <div class="stat-item">
+                  <div class="stat-icon bg-info">
+                    <i class="pi pi-clock"></i>
+                  </div>
+                  <div class="stat-info">
+                    <div class="stat-value">{{ stats.pendingPayments }}</div>
+                    <div class="stat-label">Pagos Pendientes</div>
+                  </div>
+                </div>
+
+                <div class="stat-item">
+                  <div class="stat-icon bg-danger">
+                    <i class="pi pi-exclamation-triangle"></i>
+                  </div>
+                  <div class="stat-info">
+                    <div class="stat-value">{{ stats.expiredReservations || 0 }}</div>
+                    <div class="stat-label">Reservas Vencidas</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Ocupación por sucursal -->
+          <div class="card">
+            <div class="card-header">
+              <h5 class="card-title">
+                <i class="pi pi-building"></i>
+                Ocupación por Sucursal
+              </h5>
+            </div>
+            <div class="card-body">
+              <div class="branches-occupancy">
+                <div class="branch-item">
+                  <div class="branch-header">
+                    <h6 class="branch-name">Sucursal Villa Caluyo</h6>
+                    <span class="occupancy-percentage" :class="getOccupancyClass(getOccupancyPercentage('villa_caluyo'))">
+                      {{ getOccupancyPercentage('villa_caluyo') }}%
+                    </span>
+                  </div>
+                  <div class="occupancy-bar">
+                    <div class="occupancy-fill" :style="{ width: getOccupancyPercentage('villa_caluyo') + '%' }"></div>
+                  </div>
+                  <div class="branch-stats">
+                    <span class="stat">{{ branchStats.villa_caluyo.occupied }} ocupadas</span>
+                    <span class="stat">{{ branchStats.villa_caluyo.available }} disponibles</span>
+                  </div>
+                </div>
+
+                <div class="branch-item">
+                  <div class="branch-header">
+                    <h6 class="branch-name">Sucursal Cruce Villa Adela</h6>
+                    <span class="occupancy-percentage" :class="getOccupancyClass(getOccupancyPercentage('villa_adela'))">
+                      {{ getOccupancyPercentage('villa_adela') }}%
+                    </span>
+                  </div>
+                  <div class="occupancy-bar">
+                    <div class="occupancy-fill" :style="{ width: getOccupancyPercentage('villa_adela') + '%' }"></div>
+                  </div>
+                  <div class="branch-stats">
+                    <span class="stat">{{ branchStats.villa_adela.occupied }} ocupadas</span>
+                    <span class="stat">{{ branchStats.villa_adela.available }} disponibles</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Accesos rápidos -->
+          <div class="card">
+            <div class="card-header">
+              <h5 class="card-title">
+                <i class="pi pi-external-link"></i>
+                Accesos Rápidos
+              </h5>
+            </div>
+            <div class="card-body">
+              <div class="quick-access">
+                <button @click="navigateTo('admin.payments.pending')" class="quick-access-btn warning">
+                  <i class="pi pi-clock"></i>
+                  <div>
+                    <span class="quick-access-label">Pagos Pendientes</span>
+                    <span class="quick-access-count">{{ stats.pendingPayments }}</span>
+                  </div>
+                </button>
+
+                <button @click="navigateTo('admin.reservations')" class="quick-access-btn primary">
+                  <i class="pi pi-calendar"></i>
+                  <div>
+                    <span class="quick-access-label">Todas las Reservas</span>
+                    <span class="quick-access-count">{{ stats.totalReservations }}</span>
+                  </div>
+                </button>
+
+                <button @click="navigateTo('admin.rooms')" class="quick-access-btn success">
+                  <i class="pi pi-home"></i>
+                  <div>
+                    <span class="quick-access-label">Habitaciones</span>
+                    <span class="quick-access-count">{{ stats.availableRooms }}</span>
+                  </div>
+                </button>
               </div>
             </div>
           </div>
@@ -268,7 +367,7 @@
 </template>
 
 <script>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/auth.js'
 import { adminApi } from '../../services/api.js'
@@ -303,6 +402,16 @@ export default {
     const alerts = ref([])
     const loading = ref(false)
 
+    const currentDate = computed(() => {
+      const today = new Date()
+      return today.toLocaleDateString('es-ES', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      })
+    })
+
     const loadDashboardData = async () => {
       try {
         loading.value = true
@@ -334,24 +443,39 @@ export default {
             id: 1,
             type: 'warning',
             message: 'Tienes 3 pagos pendientes de validación',
-            action: 'admin.payments.pending'
+            action: 'admin.payments.pending',
+            timestamp: new Date(Date.now() - 10 * 60 * 1000).toISOString()
           },
           {
             id: 2,
             type: 'info',
             message: 'Nueva reserva creada hace 10 minutos',
-            action: 'admin.reservations'
+            action: 'admin.reservations',
+            timestamp: new Date(Date.now() - 10 * 60 * 1000).toISOString()
           },
           {
             id: 3,
             type: 'success',
             message: 'Check-in completado correctamente - Habitación 205',
-            action: 'admin.reservations'
+            action: 'admin.reservations',
+            timestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString()
           }
         ]
         
       } catch (error) {
         console.error('Error loading dashboard data:', error)
+      } finally {
+        loading.value = false
+      }
+    }
+
+    const refreshData = async () => {
+      loading.value = true
+      try {
+        await new Promise(resolve => setTimeout(resolve, 1500))
+        await loadDashboardData()
+      } catch (error) {
+        console.error('Error al actualizar:', error)
       } finally {
         loading.value = false
       }
@@ -387,6 +511,53 @@ export default {
       return icons[type] || 'pi pi-info-circle'
     }
 
+    const getActivityType = (type) => {
+      const types = {
+        'success': 'success',
+        'warning': 'warning',
+        'danger': 'danger',
+        'info': 'info'
+      }
+      return types[type] || 'info'
+    }
+
+    const getActivityTitle = (type) => {
+      const titles = {
+        'success': 'Operación Exitosa',
+        'warning': 'Atención Requerida',
+        'danger': 'Error Crítico',
+        'info': 'Nueva Información'
+      }
+      return titles[type] || 'Actividad'
+    }
+
+    const getOccupancyPercentage = (branch) => {
+      const total = branchStats.value[branch].available + branchStats.value[branch].occupied
+      if (total === 0) return 0
+      return Math.round((branchStats.value[branch].occupied / total) * 100)
+    }
+
+    const getOccupancyClass = (occupancy) => {
+      if (occupancy >= 90) return 'high'
+      if (occupancy >= 70) return 'medium'
+      return 'low'
+    }
+
+    const formatTimeAgo = (timestamp) => {
+      const now = new Date()
+      const time = new Date(timestamp)
+      const diffInMinutes = Math.floor((now - time) / (1000 * 60))
+      
+      if (diffInMinutes < 1) return 'Hace menos de 1 minuto'
+      if (diffInMinutes < 60) return `Hace ${diffInMinutes} minutos`
+      
+      const diffInHours = Math.floor(diffInMinutes / 60)
+      if (diffInHours < 24) return `Hace ${diffInHours} horas`
+      
+      const diffInDays = Math.floor(diffInHours / 24)
+      return `Hace ${diffInDays} días`
+    }
+
     onMounted(() => {
       loadDashboardData()
     })
@@ -397,93 +568,673 @@ export default {
       branchStats,
       alerts,
       loading,
+      currentDate,
       navigateTo,
       getAlertClass,
-      getAlertIcon
+      getAlertIcon,
+      getActivityType,
+      getActivityTitle,
+      getOccupancyPercentage,
+      getOccupancyClass,
+      formatTimeAgo,
+      refreshData
     }
   }
 }
 </script>
 
 <style scoped>
-.container-fluid {
+.admin-dashboard {
+  background-color: #f8f9fa;
+  min-height: 100vh;
+  padding: 1.5rem 0;
+}
+
+.container-xl {
   max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
 }
 
-.card {
+/* Header profesional con gradiente */
+.welcome-section {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 2rem;
+  border-radius: 1rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+}
+
+.welcome-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.welcome-title {
+  font-size: 1.75rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.welcome-subtitle {
+  color: rgba(255, 255, 255, 0.9);
+  margin: 0.5rem 0 0 0;
+  font-size: 0.95rem;
+}
+
+.welcome-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  text-decoration: none;
   border: none;
-  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-  transition: all 0.2s ease-in-out;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
-.card:hover {
-  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+.btn-refresh {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.btn-refresh:hover:not(:disabled) {
+  background-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+.btn-refresh:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background-color: white;
+  color: #667eea;
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Métricas con diseño profesional */
+.metrics-section {
+  margin-bottom: 2rem;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.5rem;
+}
+
+.metric-card {
+  background: white;
+  border-radius: 1rem;
+  padding: 1.5rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e5e7eb;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.metric-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+}
+
+.metric-card.reservations::before {
+  background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+}
+.metric-card.confirmed::before {
+  background: linear-gradient(90deg, #10b981, #059669);
+}
+.metric-card.pending::before {
+  background: linear-gradient(90deg, #f59e0b, #d97706);
+}
+.metric-card.rooms::before {
+  background: linear-gradient(90deg, #06b6d4, #0891b2);
+}
+
+.metric-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+.metric-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  color: white;
+  flex-shrink: 0;
+}
+
+.metric-card.reservations .metric-icon {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+}
+.metric-card.confirmed .metric-icon {
+  background: linear-gradient(135deg, #10b981, #059669);
+}
+.metric-card.pending .metric-icon {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+.metric-card.rooms .metric-icon {
+  background: linear-gradient(135deg, #06b6d4, #0891b2);
+}
+
+.metric-content {
+  flex: 1;
+}
+
+.metric-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #1f2937;
+  line-height: 1;
+}
+
+.metric-label {
+  color: #6b7280;
+  font-size: 0.875rem;
+  margin: 0.5rem 0;
+}
+
+.metric-change {
+  font-size: 0.8rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.metric-change.positive {
+  color: #10b981;
+}
+.metric-change.negative {
+  color: #ef4444;
+}
+.metric-change.neutral {
+  color: #6b7280;
+}
+.metric-change.warning {
+  color: #f59e0b;
+}
+
+/* Layout principal */
+.dashboard-content {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 2rem;
+}
+
+/* Cards profesionales */
+.card {
+  background: white;
+  border-radius: 1rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e5e7eb;
+  margin-bottom: 1.5rem;
+  overflow: hidden;
+}
+
+.card-header {
+  background-color: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.card-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.card-body {
+  padding: 1.5rem;
+}
+
+/* Acciones con estilo profesional */
+.actions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.action-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+  cursor: pointer;
+  transition: all 0.3s;
+  position: relative;
+}
+
+.action-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  border-color: #3b82f6;
+}
+
+.action-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  color: white;
+  flex-shrink: 0;
 }
 
 .bg-primary {
-  background-color: #007bff !important;
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
 }
-
 .bg-success {
-  background-color: #28a745 !important;
+  background: linear-gradient(135deg, #10b981, #059669);
 }
-
 .bg-warning {
-  background-color: #ffc107 !important;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
 }
-
 .bg-info {
-  background-color: #17a2b8 !important;
+  background: linear-gradient(135deg, #06b6d4, #0891b2);
+}
+.bg-purple {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+}
+.bg-teal {
+  background: linear-gradient(135deg, #14b8a6, #0d9488);
+}
+.bg-danger {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
 }
 
-.text-success {
-  color: #28a745 !important;
+.action-content {
+  flex: 1;
 }
 
-.text-danger {
-  color: #dc3545 !important;
+.action-content h6 {
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0 0 0.25rem 0;
+  font-size: 0.9rem;
+}
+
+.action-content p {
+  font-size: 0.8rem;
+  color: #6b7280;
+  margin: 0;
+}
+
+.action-badge {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background: #ef4444;
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.375rem;
+  min-width: 1.25rem;
+  text-align: center;
+}
+
+/* Actividad con timeline profesional */
+.activity-timeline {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.activity-item {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.activity-item:last-child {
+  border-bottom: none;
+}
+
+.activity-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  flex-shrink: 0;
+}
+
+.activity-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.activity-title {
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.activity-time {
+  font-size: 0.8rem;
+  color: #9ca3af;
+}
+
+.activity-description {
+  color: #6b7280;
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+/* Acciones secundarias */
+.secondary-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.secondary-action {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.875rem;
+}
+
+.secondary-action:hover {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+  color: #374151;
+}
+
+/* Estadísticas rápidas */
+.quick-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.stat-item:last-child {
+  border-bottom: none;
+}
+
+.stat-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.stat-info {
+  flex: 1;
+}
+
+.stat-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.stat-label {
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+/* Ocupación por sucursal */
+.branch-item {
+  padding: 1rem 0;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.branch-item:last-child {
+  border-bottom: none;
+}
+
+.branch-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.branch-name {
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.occupancy-percentage {
+  font-size: 0.875rem;
+  font-weight: 600;
+  padding: 0.25rem 0.75rem;
+  border-radius: 1rem;
+}
+
+.occupancy-percentage.high {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.occupancy-percentage.medium {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.occupancy-percentage.low {
+  background-color: #fef2f2;
+  color: #991b1b;
+}
+
+.occupancy-bar {
+  height: 6px;
+  background-color: #f3f4f6;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+
+.occupancy-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+  transition: width 0.5s ease;
+}
+
+.branch-stats {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+/* Accesos rápidos */
+.quick-access {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.quick-access-btn {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 100%;
+}
+
+.quick-access-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.quick-access-btn.warning {
+  border-color: #f59e0b;
+}
+
+.quick-access-btn.primary {
+  border-color: #3b82f6;
+}
+
+.quick-access-btn.success {
+  border-color: #10b981;
+}
+
+.quick-access-btn i {
+  font-size: 1.25rem;
+}
+
+.quick-access-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #1f2937;
+}
+
+.quick-access-count {
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+.btn-sm {
+  padding: 0.375rem 0.75rem;
+  font-size: 0.8rem;
+}
+
+.btn-outline-primary {
+  color: #3b82f6;
+  border: 1px solid #3b82f6;
+  background: transparent;
 }
 
 .btn-outline-primary:hover {
-  background-color: #007bff;
-  border-color: #007bff;
+  background-color: #3b82f6;
+  color: white;
 }
 
-.btn-outline-success:hover {
-  background-color: #28a745;
-  border-color: #28a745;
+/* Responsive */
+@media (max-width: 768px) {
+  .welcome-content {
+    flex-direction: column;
+    gap: 1rem;
+    text-align: center;
+  }
+
+  .dashboard-content {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+
+  .actions-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .action-card {
+    flex-direction: column;
+    text-align: center;
+    gap: 0.75rem;
+  }
+
+  .activity-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+
+  .card-header {
+    flex-direction: column;
+    gap: 0.75rem;
+    align-items: flex-start;
+  }
+
+  .secondary-actions {
+    flex-direction: column;
+  }
+
+  .secondary-action {
+    justify-content: center;
+  }
 }
 
-.btn-outline-warning:hover {
-  background-color: #ffc107;
-  border-color: #ffc107;
-}
+@media (max-width: 480px) {
+  .metrics-grid {
+    grid-template-columns: 1fr;
+  }
 
-.btn-outline-info:hover {
-  background-color: #17a2b8;
-  border-color: #17a2b8;
-}
+  .container-xl {
+    padding: 0 0.5rem;
+  }
 
-.btn-outline-secondary:hover {
-  background-color: #6c757d;
-  border-color: #6c757d;
-}
+  .welcome-section {
+    padding: 1.5rem;
+  }
 
-.btn-outline-dark:hover {
-  background-color: #343a40;
-  border-color: #343a40;
-}
-
-.alert {
-  border: none;
-  border-radius: 0.5rem;
-}
-
-.border {
-  border: 1px solid #dee2e6 !important;
-}
-
-.badge {
-  font-size: 0.875rem;
+  .card-body {
+    padding: 1rem;
+  }
 }
 </style>

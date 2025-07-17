@@ -166,6 +166,7 @@
                 class="form-check-input" 
                 type="checkbox" 
                 id="needs_parking"
+                @change="onParkingChange"
               >
               <label class="form-check-label" for="needs_parking">
                 <div class="service-card">
@@ -177,11 +178,67 @@
                     <div class="service-description">Espacio de estacionamiento seguro</div>
                   </div>
                   <div class="service-price">
-                    <span class="price">Bs. 15</span>
-                    <small class="period">por noche</small>
+                    <span class="price text-success">GRATUITO</span>
                   </div>
                 </div>
               </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Car Details Section (shown when parking is selected) -->
+        <div v-if="form.needs_parking" class="car-details-section mt-3">
+          <div class="card border-primary">
+            <div class="card-header bg-primary text-white">
+              <h6 class="mb-0">
+                <i class="fas fa-car me-2"></i>
+                Datos del Vehículo
+              </h6>
+            </div>
+            <div class="card-body">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="form-label">
+                    <i class="fas fa-car me-1"></i>
+                    Modelo del Vehículo
+                  </label>
+                  <input 
+                    v-model="form.car_model" 
+                    type="text" 
+                    class="form-control"
+                    :class="{ 'is-invalid': errors.car_model }"
+                    placeholder="Ej: Toyota Corolla, Honda Civic, etc."
+                    maxlength="50"
+                  >
+                  <div v-if="errors.car_model" class="invalid-feedback">
+                    {{ errors.car_model }}
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">
+                    <i class="fas fa-hashtag me-1"></i>
+                    Placa del Vehículo
+                  </label>
+                  <input 
+                    v-model="form.car_plate" 
+                    type="text" 
+                    class="form-control text-uppercase"
+                    :class="{ 'is-invalid': errors.car_plate }"
+                    placeholder="Ej: ABC-1234"
+                    maxlength="10"
+                    @input="formatCarPlate"
+                  >
+                  <div v-if="errors.car_plate" class="invalid-feedback">
+                    {{ errors.car_plate }}
+                  </div>
+                </div>
+              </div>
+              <div class="mt-2">
+                <small class="text-muted">
+                  <i class="fas fa-info-circle me-1"></i>
+                  Estos datos aparecerán en tu boleta de reserva para identificación del vehículo
+                </small>
+              </div>
             </div>
           </div>
         </div>
@@ -298,11 +355,11 @@
                   <i class="fas fa-parking me-2 text-muted"></i>
                   Estacionamiento
                   <small class="text-muted d-block">
-                    {{ calculatedNights }} noche{{ calculatedNights > 1 ? 's' : '' }} × Bs. 15
+                    {{ calculatedNights }} noche{{ calculatedNights > 1 ? 's' : '' }} × Gratuito
                   </small>
                 </div>
-                <div class="cost-value">
-                  Bs. {{ parkingTotal.toFixed(2) }}
+                <div class="cost-value text-success">
+                  Bs. 0.00
                 </div>
               </div>
               
@@ -416,8 +473,9 @@
             <div class="qr-section mb-4">
               <h6 class="mb-3">Escanea el código QR para realizar el pago</h6>
               <div class="qr-code-container">
-                <div ref="qrCodeRef" id="qrcode"></div>
+                <img src="/images/qrpago.png" alt="QR de Pago" style="width: 250px; height: 250px;" />
               </div>
+
               <div class="payment-amount mt-3">
                 <h4 class="text-primary">Monto a pagar: <strong>Bs. {{ grandTotal.toFixed(2) }}</strong></h4>
               </div>
@@ -504,8 +562,7 @@
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { customerApi } from '@/services/api'
 import jsPDF from 'jspdf'
-import 'jspdf-autotable'
-import QRCode from 'qrcode'
+import autoTable from 'jspdf-autotable'
 
 export default {
   name: 'ReservationForm',
@@ -526,7 +583,6 @@ export default {
     const showQRModal = ref(false)
     const reservationData = ref({})
     const errors = ref({})
-    const qrCodeRef = ref(null)
     
     const form = ref({
       room_id: props.room.id,
@@ -535,6 +591,8 @@ export default {
       adults_count: props.searchParams.adults || 1,
       children_count: props.searchParams.children || 0,
       needs_parking: false,
+      car_model: '',
+      car_plate: '',
       payment_method: 'qr',
       special_requests: ''
     })
@@ -571,7 +629,8 @@ export default {
     })
 
     const parkingTotal = computed(() => {
-      return form.value.needs_parking ? (15 * calculatedNights.value) : 0
+      // Estacionamiento gratuito
+      return 0
     })
 
     const grandTotal = computed(() => {
@@ -590,6 +649,7 @@ export default {
              form.value.adults_count && 
              form.value.payment_method &&
              calculatedNights.value > 0 &&
+             (!form.value.needs_parking || (form.value.car_model && form.value.car_plate)) &&
              Object.keys(errors.value).length === 0
     })
 
@@ -607,6 +667,23 @@ export default {
           form.value.check_out_date = newCheckOut.toISOString().split('T')[0]
         }
       }
+    }
+
+    const onParkingChange = () => {
+      if (!form.value.needs_parking) {
+        // Limpiar datos del auto si se desmarca el estacionamiento
+        form.value.car_model = ''
+        form.value.car_plate = ''
+        // Limpiar errores relacionados
+        delete errors.value.car_model
+        delete errors.value.car_plate
+      }
+    }
+
+    const formatCarPlate = (event) => {
+      // Convertir a mayúsculas automáticamente
+      event.target.value = event.target.value.toUpperCase()
+      form.value.car_plate = event.target.value.toUpperCase()
     }
 
     const validateForm = () => {
@@ -649,45 +726,25 @@ export default {
       if (totalGuests > props.room.room_type.max_guests) {
         errors.value.children_count = `Total de huéspedes no puede exceder ${props.room.room_type.max_guests}`
       }
+
+      // Validar datos del auto si se requiere estacionamiento
+      if (form.value.needs_parking) {
+        if (!form.value.car_model || form.value.car_model.trim() === '') {
+          errors.value.car_model = 'El modelo del vehículo es requerido'
+        }
+        
+        if (!form.value.car_plate || form.value.car_plate.trim() === '') {
+          errors.value.car_plate = 'La placa del vehículo es requerida'
+        } else if (form.value.car_plate.length < 6) {
+          errors.value.car_plate = 'La placa debe tener al menos 6 caracteres'
+        }
+      }
       
       if (form.value.special_requests && form.value.special_requests.length > 500) {
         errors.value.special_requests = 'Las solicitudes especiales no pueden exceder 500 caracteres'
       }
       
       return Object.keys(errors.value).length === 0
-    }
-
-    const generateQRCode = async () => {
-      if (!qrCodeRef.value) return
-      
-      const paymentData = {
-        amount: grandTotal.value,
-        account: paymentInfo.value.account,
-        bank: paymentInfo.value.bank,
-        concept: `Reserva ${reservationData.value.reservation_code}`,
-        currency: 'BOB'
-      }
-      
-      const qrString = JSON.stringify(paymentData)
-      
-      try {
-        // Limpiar contenedor anterior
-        const container = document.getElementById('qrcode')
-        if (container) {
-          container.innerHTML = ''
-        }
-        
-        await QRCode.toCanvas(container, qrString, {
-          width: 250,
-          height: 250,
-          color: {
-            dark: '#000000',
-            light: '#FFFFFF'
-          }
-        })
-      } catch (error) {
-        console.error('Error generating QR code:', error)
-      }
     }
 
     const handleReservation = async () => {
@@ -725,8 +782,6 @@ export default {
         // Si es pago QR, mostrar modal QR primero
         if (form.value.payment_method === 'qr') {
           showQRModal.value = true
-          await nextTick()
-          await generateQRCode()
         } else {
           showSuccessModal.value = true
         }
@@ -767,80 +822,168 @@ export default {
     const downloadPDF = () => {
       try {
         const doc = new jsPDF()
+        const pageWidth = doc.internal.pageSize.width
+        const pageHeight = doc.internal.pageSize.height
         
         // Configuración del documento
         doc.setFontSize(20)
         doc.setTextColor(40, 40, 40)
-        doc.text('BOLETA DE RESERVA', 105, 30, { align: 'center' })
+        doc.text('BOLETA DE RESERVA', pageWidth / 2, 25, { align: 'center' })
         
         // Información del hospedaje
         doc.setFontSize(14)
         doc.setTextColor(100, 100, 100)
-        doc.text(props.room.branch.name, 105, 45, { align: 'center' })
+        doc.text(props.room.branch.name, pageWidth / 2, 35, { align: 'center' })
+        doc.text(`Categoría: ${props.room.branch.category}`, pageWidth / 2, 42, { align: 'center' })
         
         // Línea separadora
         doc.setLineWidth(0.5)
-        doc.line(20, 55, 190, 55)
+        doc.setDrawColor(200, 200, 200)
+        doc.line(20, 50, pageWidth - 20, 50)
         
         // Información de la reserva
         doc.setFontSize(12)
         doc.setTextColor(0, 0, 0)
         
+        let yPosition = 60
+        
+        // Datos básicos de la reserva
         const reservationInfo = [
-          ['Código de Reserva:', reservationData.value.reservation_code],
-          ['Habitación:', `${props.room.room_type.name} - ${props.room.room_number}`],
-          ['Huésped:', `${form.value.adults_count} adulto(s), ${form.value.children_count} niño(s)`],
+          ['Código de Reserva:', reservationData.value.reservation_code || 'N/A'],
+          ['Fecha de Reserva:', new Date().toLocaleDateString('es-BO')],
+          ['Habitación:', `${props.room.room_type.name} - Habitación ${props.room.room_number}`],
+          ['Huéspedes:', `${form.value.adults_count} adulto(s), ${form.value.children_count} niño(s)`],
           ['Check-in:', formatDate(form.value.check_in_date)],
           ['Check-out:', formatDate(form.value.check_out_date)],
           ['Noches:', `${calculatedNights.value} noche(s)`],
-          ['Método de Pago:', form.value.payment_method === 'qr' ? 'QR/Transferencia' : 'Efectivo']
+          ['Método de Pago:', form.value.payment_method === 'qr' ? 'QR/Transferencia' : 'Efectivo al llegar']
         ]
         
-        let yPosition = 70
+        // Agregar información del vehículo si aplica
+        if (form.value.needs_parking) {
+          reservationInfo.push(['Estacionamiento:', 'Incluido (Gratuito)'])
+          reservationInfo.push(['Modelo del Vehículo:', form.value.car_model])
+          reservationInfo.push(['Placa del Vehículo:', form.value.car_plate])
+        }
+        
         reservationInfo.forEach(([label, value]) => {
+          doc.setFont(undefined, 'bold')
           doc.text(label, 20, yPosition)
-          doc.text(value, 100, yPosition)
-          yPosition += 10
+          doc.setFont(undefined, 'normal')
+          doc.text(value, 80, yPosition)
+          yPosition += 8
         })
         
+        // Solicitudes especiales
+        if (form.value.special_requests) {
+          yPosition += 5
+          doc.setFont(undefined, 'bold')
+          doc.text('Solicitudes Especiales:', 20, yPosition)
+          yPosition += 8
+          doc.setFont(undefined, 'normal')
+          
+          // Dividir el texto en líneas
+          const splitText = doc.splitTextToSize(form.value.special_requests, pageWidth - 40)
+          splitText.forEach(line => {
+            doc.text(line, 20, yPosition)
+            yPosition += 6
+          })
+        }
+        
         // Desglose de costos
-        yPosition += 10
-        doc.setFontSize(14)
-        doc.text('DESGLOSE DE COSTOS:', 20, yPosition)
         yPosition += 15
+        doc.setFontSize(14)
+        doc.setFont(undefined, 'bold')
+        doc.text('DESGLOSE DE COSTOS:', 20, yPosition)
+        yPosition += 10
         
         const costBreakdown = [
-          ['Concepto', 'Cantidad', 'Precio Unit.', 'Subtotal'],
-          ['Habitación', `${calculatedNights.value} noche(s)`, `Bs. ${(roomTotal.value / calculatedNights.value).toFixed(2)}`, `Bs. ${roomTotal.value.toFixed(2)}`]
+          ['Concepto', 'Cantidad', 'Precio Unitario', 'Subtotal'],
+          [
+            `Habitación ${props.room.room_type.name}`, 
+            `${calculatedNights.value} noche(s)`, 
+            `Bs. ${(roomTotal.value / calculatedNights.value).toFixed(2)}`, 
+            `Bs. ${roomTotal.value.toFixed(2)}`
+          ]
         ]
         
         if (form.value.needs_parking) {
-          costBreakdown.push(['Estacionamiento', `${calculatedNights.value} noche(s)`, 'Bs. 15.00', `Bs. ${parkingTotal.value.toFixed(2)}`])
+          costBreakdown.push([
+            'Estacionamiento', 
+            `${calculatedNights.value} noche(s)`, 
+            'Bs. 0.00 (Gratuito)', 
+            'Bs. 0.00'
+          ])
         }
         
-        costBreakdown.push(['', '', 'TOTAL:', `Bs. ${grandTotal.value.toFixed(2)}`])
-        
-        doc.autoTable({
+        autoTable(doc, {
           startY: yPosition,
           head: [costBreakdown[0]],
           body: costBreakdown.slice(1),
           theme: 'grid',
           styles: { fontSize: 10 },
-          headStyles: { fillColor: [41, 128, 185] },
-          foot: [[{ content: `TOTAL: Bs. ${grandTotal.value.toFixed(2)}`, colSpan: 4, styles: { fontStyle: 'bold', halign: 'right' } }]]
+          headStyles: { fillColor: [41, 128, 185], textColor: [255, 255, 255] },
+          columnStyles: {
+            0: { cellWidth: 60 },
+            1: { cellWidth: 30, halign: 'center' },
+            2: { cellWidth: 40, halign: 'right' },
+            3: { cellWidth: 40, halign: 'right' }
+          }
+        })
+        
+        // Total
+        const finalY = doc.lastAutoTable ? doc.lastAutoTable.finalY + 10 : yPosition + 50
+        doc.setFontSize(16)
+        doc.setFont(undefined, 'bold')
+        doc.setTextColor(40, 167, 69)
+        doc.text(`TOTAL A PAGAR: Bs. ${grandTotal.value.toFixed(2)}`, pageWidth - 20, finalY, { align: 'right' })
+        
+        // Información importante
+        let footerY = finalY + 20
+        doc.setFontSize(11)
+        doc.setTextColor(0, 0, 0)
+        doc.setFont(undefined, 'bold')
+        doc.text('INFORMACIÓN IMPORTANTE:', 20, footerY)
+        footerY += 8
+        
+        doc.setFont(undefined, 'normal')
+        const importantInfo = [
+          '• Presentar esta boleta al momento del check-in',
+          '• El check-in es a partir de las 14:00 hrs',
+          '• El check-out es hasta las 12:00 hrs',
+          '• Cancelaciones: contactar con 24 hrs de anticipación'
+        ]
+        
+        if (form.value.payment_method === 'qr') {
+          importantInfo.push('• No olvide subir el comprobante de pago en "Mis Reservas"')
+        }
+        
+        if (form.value.needs_parking) {
+          importantInfo.push(`• Su vehículo ${form.value.car_model} (${form.value.car_plate}) tiene estacionamiento asignado`)
+        }
+        
+        importantInfo.forEach(info => {
+          doc.text(info, 20, footerY)
+          footerY += 6
         })
         
         // Pie de página
-        const finalY = doc.lastAutoTable.finalY + 20
+        footerY += 10
         doc.setFontSize(10)
         doc.setTextColor(100, 100, 100)
-        doc.text('Gracias por elegirnos. ¡Esperamos que disfrute su estadía!', 105, finalY, { align: 'center' })
+        doc.text('Gracias por elegirnos. ¡Esperamos que disfrute su estadía!', pageWidth / 2, footerY, { align: 'center' })
         
         // Fecha de emisión
-        doc.text(`Fecha de emisión: ${new Date().toLocaleDateString('es-BO')}`, 105, finalY + 10, { align: 'center' })
+        doc.text(`Fecha de emisión: ${new Date().toLocaleDateString('es-BO', { 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        })}`, pageWidth / 2, footerY + 8, { align: 'center' })
         
         // Descargar el PDF
-        doc.save(`Boleta_Reserva_${reservationData.value.reservation_code}.pdf`)
+        doc.save(`Boleta_Reserva_${reservationData.value.reservation_code || 'temp'}.pdf`)
         
       } catch (error) {
         console.error('Error generating PDF:', error)
@@ -902,7 +1045,6 @@ export default {
       showQRModal,
       reservationData,
       errors,
-      qrCodeRef,
       paymentInfo,
       minDate,
       calculatedNights,
@@ -912,6 +1054,8 @@ export default {
       isAuthenticated,
       isFormValid,
       updateStayDuration,
+      onParkingChange,
+      formatCarPlate,
       handleReservation,
       confirmPayment,
       closeQRModal,
@@ -1041,12 +1185,30 @@ export default {
 
 .service-price .price {
   font-weight: 600;
-  color: #28a745;
+  font-size: 1.1rem;
 }
 
-.service-price .period {
-  color: #6c757d;
-  font-size: 0.8rem;
+.car-details-section {
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.car-details-section .card-header {
+  border-radius: 8px 8px 0 0;
+}
+
+.car-details-section .form-control {
+  border-radius: 6px;
 }
 
 .cost-summary-section .card {
@@ -1183,9 +1345,8 @@ export default {
   width: fit-content;
 }
 
-#qrcode {
-  display: flex;
-  justify-content: center;
+.text-uppercase {
+  text-transform: uppercase;
 }
 
 @media (max-width: 768px) {

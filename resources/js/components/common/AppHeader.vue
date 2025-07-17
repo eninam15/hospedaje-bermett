@@ -5,12 +5,11 @@
       <router-link class="navbar-brand" to="/">
         <div class="brand-container">
           <div class="brand-icon">
-            <i class="bi bi-house-heart-fill"></i>
+            <div class="qr-code-container">
+              <img src="/images/logo-bermett.png" alt="QR de Pago" style="width: 140px; height: 50px;" />
+            </div>
           </div>
-          <div class="brand-text">
-            <span class="brand-name">Bermett</span>
-            <span class="brand-subtitle">Hotels</span>
-          </div>
+          
         </div>
       </router-link>
 

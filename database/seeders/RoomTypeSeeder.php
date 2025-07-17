@@ -10,6 +10,30 @@ class RoomTypeSeeder extends Seeder
     public function run()
     {
         RoomType::create([
+            'name' => 'Simple',
+            'description' => 'Habitación económica para 1 persona',
+            'max_adults' => 1,
+            'max_children' => 0,
+            'amenities' => ['Cama individual', 'TV', 'WiFi']
+        ]);
+
+        RoomType::create([
+            'name' => 'Estándar',
+            'description' => 'Habitación cómoda para 2 personas',
+            'max_adults' => 2,
+            'max_children' => 1,
+            'amenities' => ['Cama doble', 'Baño privado', 'TV', 'WiFi']
+        ]);
+
+        RoomType::create([
+            'name' => 'Matrimonial',
+            'description' => 'Habitación para pareja',
+            'max_adults' => 2,
+            'max_children' => 1,
+            'amenities' => ['Cama matrimonial', 'Baño privado', 'TV', 'WiFi', 'Espejo grande']
+        ]);
+
+        RoomType::create([
             'name' => 'Individual',
             'description' => 'Habitación para 1 persona',
             'max_adults' => 1,

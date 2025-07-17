@@ -1,400 +1,462 @@
 <template>
-  <div class="container-fluid">
-    <div class="row">
-      <div class="col-12">
-        <div class="card">
-          <div class="card-header d-flex justify-content-between align-items-center">
-            <h4>Reportes y Estadísticas</h4>
-            <div>
-              <button 
-                v-if="currentReport"
-                class="btn btn-success me-2"
-                @click="downloadPDF"
-                :disabled="loading"
-              >
-                <i class="fas fa-download"></i> Descargar PDF
-              </button>
-              <button 
-                v-if="currentReport"
-                class="btn btn-outline-secondary"
-                @click="clearReport"
-              >
-                <i class="fas fa-times"></i> Cerrar
+  <div class="reports-dashboard">
+    <div class="container-xl">
+      <!-- Header profesional -->
+      <div class="reports-header">
+        <div class="header-content">
+          <div class="header-text">
+            <h2 class="header-title">📊 Reportes y Estadísticas</h2>
+            <p class="header-subtitle">Análisis detallado de datos del sistema</p>
+          </div>
+          <div class="header-actions" v-if="currentReport">
+            <button 
+              @click="downloadPDF"
+              class="btn btn-success"
+              :disabled="loading"
+            >
+              <i class="pi pi-download"></i>
+              Descargar PDF
+            </button>
+            <button 
+              @click="clearReport"
+              class="btn btn-outline-secondary"
+            >
+              <i class="pi pi-times"></i>
+              Cerrar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel de Selección de Reportes -->
+      <div v-if="!currentReport" class="report-selection">
+        <!-- Filtros Globales -->
+        <div class="card filters-card">
+          <div class="card-header">
+            <h5 class="card-title">
+              <i class="pi pi-filter"></i>
+              Filtros de Búsqueda
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="filters-grid">
+              <div class="filter-group">
+                <label class="filter-label">Fecha Inicio</label>
+                <input 
+                  v-model="filters.start_date"
+                  type="date" 
+                  class="form-control"
+                >
+              </div>
+              <div class="filter-group">
+                <label class="filter-label">Fecha Fin</label>
+                <input 
+                  v-model="filters.end_date"
+                  type="date" 
+                  class="form-control"
+                >
+              </div>
+              <div class="filter-group">
+                <label class="filter-label">Sucursal</label>
+                <select v-model="filters.branch_id" class="form-select">
+                  <option value="">Todas las sucursales</option>
+                  <option 
+                    v-for="branch in branches" 
+                    :key="branch.id" 
+                    :value="branch.id"
+                  >
+                    {{ branch.name }}
+                  </option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Tipos de reportes -->
+        <div class="card reports-grid-card">
+          <div class="card-header">
+            <h5 class="card-title">
+              <i class="pi pi-chart-line"></i>
+              Tipos de Reportes
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="reports-grid">
+              <div class="report-card" @click="generateReport('reservations')">
+                <div class="report-icon reservations">
+                  <i class="pi pi-calendar"></i>
+                </div>
+                <div class="report-content">
+                  <h6>Reporte de Reservas</h6>
+                  <p>Listado completo de reservas con detalles financieros</p>
+                  <div class="report-features">
+                    <span class="feature-tag">Ingresos</span>
+                    <span class="feature-tag">Estados</span>
+                    <span class="feature-tag">Clientes</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="report-card" @click="generateReport('registrations')">
+                <div class="report-icon registrations">
+                  <i class="pi pi-sign-in"></i>
+                </div>
+                <div class="report-content">
+                  <h6>Reporte de Check-ins</h6>
+                  <p>Listado completo de registros y check-ins</p>
+                  <div class="report-features">
+                    <span class="feature-tag">Duración</span>
+                    <span class="feature-tag">Ocupación</span>
+                    <span class="feature-tag">Horarios</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="report-card" @click="generateReport('users')">
+                <div class="report-icon users">
+                  <i class="pi pi-users"></i>
+                </div>
+                <div class="report-content">
+                  <h6>Reporte de Usuarios</h6>
+                  <p>Listado y análisis de usuarios registrados</p>
+                  <div class="report-features">
+                    <span class="feature-tag">Actividad</span>
+                    <span class="feature-tag">Registro</span>
+                    <span class="feature-tag">Documentos</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Loading State -->
+      <div v-if="loading" class="loading-container">
+        <div class="loading-content">
+          <div class="loading-spinner">
+            <i class="pi pi-spin pi-spinner"></i>
+          </div>
+          <h4>Generando reporte...</h4>
+          <p>Por favor espera mientras procesamos los datos</p>
+        </div>
+      </div>
+
+      <!-- Vista del Reporte -->
+      <div v-if="currentReport && !loading" class="report-view">
+        <!-- Header del Reporte -->
+        <div class="report-header">
+          <div class="report-header-content">
+            <div class="report-title-section">
+              <h3 class="report-title">{{ getReportTitle(currentReportType) }}</h3>
+              <div class="report-meta">
+                <span class="meta-item">
+                  <i class="pi pi-calendar"></i>
+                  {{ formatDate(filters.start_date) }} - {{ formatDate(filters.end_date) }}
+                </span>
+                <span class="meta-item" v-if="selectedBranchName">
+                  <i class="pi pi-building"></i>
+                  {{ selectedBranchName }}
+                </span>
+                <span class="meta-item">
+                  <i class="pi pi-clock"></i>
+                  {{ new Date().toLocaleString() }}
+                </span>
+              </div>
+            </div>
+            <div class="report-actions">
+              <button @click="downloadPDF" class="btn btn-primary">
+                <i class="pi pi-download"></i>
+                Descargar PDF
               </button>
             </div>
           </div>
-          
+        </div>
+
+        <!-- Resumen del Reporte -->
+        <div class="metrics-section" v-if="currentReport.summary">
+          <div class="metrics-grid">
+            <div 
+              v-for="(value, key) in currentReport.summary" 
+              :key="key"
+              class="metric-card"
+              :class="getMetricClass(key)"
+            >
+              <div class="metric-icon">
+                <i :class="getMetricIcon(key)"></i>
+              </div>
+              <div class="metric-content">
+                <div class="metric-value">{{ formatValue(value, key) }}</div>
+                <div class="metric-label">{{ formatLabel(key) }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Datos Detallados -->
+        <div class="card detailed-data-card">
+          <div class="card-header">
+            <h5 class="card-title">
+              <i class="pi pi-table"></i>
+              {{ getDetailTitle() }}
+            </h5>
+            <span class="records-count">{{ detailedData.length }} registros</span>
+          </div>
           <div class="card-body">
-            <!-- Panel de Selección de Reportes -->
-            <div v-if="!currentReport" class="report-selection">
-              <!-- Filtros Globales -->
-              <div class="row mb-4">
-                <div class="col-md-4">
-                  <label class="form-label">Fecha Inicio</label>
-                  <input 
-                    v-model="filters.start_date"
-                    type="date" 
-                    class="form-control"
-                  >
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th v-for="header in getTableHeaders()" :key="header" class="table-header">
+                      {{ header }}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="item in detailedData" :key="item.id" class="table-row">
+                    <!-- Reservations -->
+                    <template v-if="currentReportType === 'reservations'">
+                      <td class="table-cell">
+                        <div class="code-cell">
+                          <strong>{{ item.reservation_code }}</strong>
+                        </div>
+                      </td>
+                      <td class="table-cell">
+                        <div class="user-cell">
+                          <strong>{{ item.user?.name }}</strong>
+                          <small>{{ item.user?.email }}</small>
+                        </div>
+                      </td>
+                      <td class="table-cell">
+                        <div class="room-cell">
+                          <span class="room-number">{{ item.room?.room_number }}</span>
+                          <small>{{ item.room?.room_type?.name }}</small>
+                        </div>
+                      </td>
+                      <td class="table-cell">{{ formatDate(item.check_in_date) }}</td>
+                      <td class="table-cell">{{ formatDate(item.check_out_date) }}</td>
+                      <td class="table-cell">
+                        <span class="nights-badge">{{ item.total_nights }}</span>
+                      </td>
+                      <td class="table-cell">
+                        <span class="guests-badge">{{ item.adults_count + item.children_count }}</span>
+                      </td>
+                      <td class="table-cell">
+                        <span :class="getStatusClass(item.status)" class="status-badge">
+                          {{ getStatusText(item.status) }}
+                        </span>
+                      </td>
+                      <td class="table-cell">
+                        <strong class="amount-text">{{ formatCurrency(item.total_amount) }}</strong>
+                      </td>
+                    </template>
+
+                    <!-- Registrations -->
+                    <template v-if="currentReportType === 'registrations'">
+                      <td class="table-cell">
+                        <div class="code-cell">
+                          <strong>{{ item.registration_code }}</strong>
+                        </div>
+                      </td>
+                      <td class="table-cell">
+                        <div class="user-cell">
+                          <strong>{{ item.user?.name }}</strong>
+                          <small>{{ item.user?.email }}</small>
+                        </div>
+                      </td>
+                      <td class="table-cell">
+                        <div class="room-cell">
+                          <span class="room-number">{{ item.room?.room_number }}</span>
+                          <small>{{ item.room?.room_type?.name }}</small>
+                        </div>
+                      </td>
+                      <td class="table-cell">{{ formatDateTime(item.actual_check_in) }}</td>
+                      <td class="table-cell">
+                        {{ item.actual_check_out ? formatDateTime(item.actual_check_out) : 'Activo' }}
+                      </td>
+                      <td class="table-cell">
+                        <span class="duration-badge">
+                          {{ calculateDuration(item.actual_check_in, item.actual_check_out) }}
+                        </span>
+                      </td>
+                      <td class="table-cell">
+                        <span class="guests-badge">{{ getTotalGuests(item) }}</span>
+                      </td>
+                      <td class="table-cell">
+                        <span :class="getRegistrationStatusClass(item.status)" class="status-badge">
+                          {{ getRegistrationStatusText(item.status) }}
+                        </span>
+                      </td>
+                      <td class="table-cell">
+                        <span class="type-badge">
+                          {{ item.reservation?.reservation_code?.startsWith('DIR') ? 'Directo' : 'Reserva' }}
+                        </span>
+                      </td>
+                    </template>
+
+                    <!-- Users -->
+                    <template v-if="currentReportType === 'users'">
+                      <td class="table-cell">
+                        <div class="user-cell">
+                          <strong>{{ item.name }}</strong>
+                        </div>
+                      </td>
+                      <td class="table-cell">{{ item.email }}</td>
+                      <td class="table-cell">{{ item.phone || '-' }}</td>
+                      <td class="table-cell">
+                        <div class="document-cell">
+                          <span class="doc-type">{{ item.document_type }}</span>
+                          <span class="doc-number">{{ item.document_number }}</span>
+                        </div>
+                      </td>
+                      <td class="table-cell">{{ formatDate(item.created_at) }}</td>
+                      <td class="table-cell">
+                        <span :class="item.is_active ? 'status-badge active' : 'status-badge inactive'">
+                          {{ item.is_active ? 'Activo' : 'Inactivo' }}
+                        </span>
+                      </td>
+                    </template>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Análisis Adicional -->
+        <div class="additional-analysis">
+          <!-- Top Clientes (para reservas) -->
+          <div v-if="currentReportType === 'reservations' && currentReport.top_customers && currentReport.top_customers.length > 0" class="analysis-section">
+            <div class="analysis-grid">
+              <div class="analysis-card">
+                <div class="analysis-header">
+                  <h6 class="analysis-title">
+                    <i class="pi pi-star"></i>
+                    Top 5 Clientes por Ingresos
+                  </h6>
                 </div>
-                <div class="col-md-4">
-                  <label class="form-label">Fecha Fin</label>
-                  <input 
-                    v-model="filters.end_date"
-                    type="date" 
-                    class="form-control"
-                  >
-                </div>
-                <div class="col-md-4">
-                  <label class="form-label">Sucursal</label>
-                  <select v-model="filters.branch_id" class="form-select">
-                    <option value="">Todas las sucursales</option>
-                    <option 
-                      v-for="branch in branches" 
-                      :key="branch.id" 
-                      :value="branch.id"
-                    >
-                      {{ branch.name }}
-                    </option>
-                  </select>
+                <div class="analysis-content">
+                  <div class="top-customers">
+                    <div v-for="(customer, index) in currentReport.top_customers" :key="customer.user.id" class="customer-item">
+                      <div class="customer-rank">{{ index + 1 }}</div>
+                      <div class="customer-info">
+                        <strong>{{ customer.user.name }}</strong>
+                        <small>{{ customer.user.email }}</small>
+                      </div>
+                      <div class="customer-stats">
+                        <div class="stat-item">
+                          <span class="stat-value">{{ customer.reservations }}</span>
+                          <span class="stat-label">Reservas</span>
+                        </div>
+                        <div class="stat-item">
+                          <span class="stat-value">{{ formatCurrency(customer.total_spent) }}</span>
+                          <span class="stat-label">Total</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
               
-              <!-- Tipos de reportes -->
-              <div class="row">
-                <div class="col-md-6 col-lg-4 mb-3">
-                  <div class="card report-card" @click="generateReport('reservations')">
-                    <div class="card-body text-center">
-                      <i class="fas fa-calendar-alt fa-3x mb-3 text-primary"></i>
-                      <h5 class="card-title">Reporte de Reservas</h5>
-                      <p class="card-text">Listado completo de reservas con detalles</p>
-                    </div>
-                  </div>
+              <div class="analysis-card">
+                <div class="analysis-header">
+                  <h6 class="analysis-title">
+                    <i class="pi pi-home"></i>
+                    Top 5 Habitaciones por Ingresos
+                  </h6>
                 </div>
-                
-                <div class="col-md-6 col-lg-4 mb-3">
-                  <div class="card report-card" @click="generateReport('registrations')">
-                    <div class="card-body text-center">
-                      <i class="fas fa-sign-in-alt fa-3x mb-3 text-warning"></i>
-                      <h5 class="card-title">Reporte de Check-ins</h5>
-                      <p class="card-text">Listado completo de registros y check-ins</p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div class="col-md-6 col-lg-4 mb-3">
-                  <div class="card report-card" @click="generateReport('users')">
-                    <div class="card-body text-center">
-                      <i class="fas fa-users fa-3x mb-3 text-info"></i>
-                      <h5 class="card-title">Reporte de Usuarios</h5>
-                      <p class="card-text">Listado y análisis de usuarios</p>
+                <div class="analysis-content">
+                  <div class="top-rooms">
+                    <div v-for="(room, index) in currentReport.top_rooms" :key="room.room.id" class="room-item">
+                      <div class="room-rank">{{ index + 1 }}</div>
+                      <div class="room-info">
+                        <span class="room-number">{{ room.room.room_number }}</span>
+                        <small>{{ room.room.room_type?.name }}</small>
+                      </div>
+                      <div class="room-stats">
+                        <div class="stat-item">
+                          <span class="stat-value">{{ room.reservations }}</span>
+                          <span class="stat-label">Reservas</span>
+                        </div>
+                        <div class="stat-item">
+                          <span class="stat-value">{{ formatCurrency(room.revenue) }}</span>
+                          <span class="stat-label">Ingresos</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
+          </div>
 
-            <!-- Loading State -->
-            <div v-if="loading" class="text-center p-5">
-              <div class="spinner-border spinner-border-lg text-primary" role="status">
-                <span class="visually-hidden">Generando reporte...</span>
+          <!-- Análisis por Sucursal -->
+          <div v-if="currentReport.branch_stats" class="analysis-section">
+            <div class="analysis-card full-width">
+              <div class="analysis-header">
+                <h6 class="analysis-title">
+                  <i class="pi pi-building"></i>
+                  Análisis por Sucursal
+                </h6>
               </div>
-              <p class="mt-3">Generando reporte...</p>
+              <div class="analysis-content">
+                <div class="branch-stats">
+                  <div v-for="(stats, branchName) in currentReport.branch_stats" :key="branchName" class="branch-stat-item">
+                    <div class="branch-name">{{ branchName }}</div>
+                    <div class="branch-metrics">
+                      <div v-if="currentReportType === 'reservations'" class="metric-group">
+                        <div class="metric-item">
+                          <span class="metric-value">{{ stats.count }}</span>
+                          <span class="metric-label">Reservas</span>
+                        </div>
+                        <div class="metric-item">
+                          <span class="metric-value">{{ formatCurrency(stats.revenue) }}</span>
+                          <span class="metric-label">Ingresos</span>
+                        </div>
+                        <div class="metric-item">
+                          <span class="metric-value">{{ stats.guests }}</span>
+                          <span class="metric-label">Huéspedes</span>
+                        </div>
+                      </div>
+                      <div v-if="currentReportType === 'registrations'" class="metric-group">
+                        <div class="metric-item">
+                          <span class="metric-value">{{ stats.total }}</span>
+                          <span class="metric-label">Total</span>
+                        </div>
+                        <div class="metric-item">
+                          <span class="metric-value">{{ stats.active }}</span>
+                          <span class="metric-label">Activos</span>
+                        </div>
+                        <div class="metric-item">
+                          <span class="metric-value">{{ stats.completed }}</span>
+                          <span class="metric-label">Completados</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
+          </div>
 
-            <!-- Vista del Reporte -->
-            <div v-if="currentReport && !loading" class="report-view">
-              <div class="d-flex justify-content-between align-items-center mb-4">
-                <div>
-                  <h3>{{ getReportTitle(currentReportType) }}</h3>
-                  <p class="text-muted mb-0">
-                    Período: {{ formatDate(filters.start_date) }} - {{ formatDate(filters.end_date) }}
-                    <span v-if="selectedBranchName"> | {{ selectedBranchName }}</span>
-                  </p>
-                </div>
-                <div class="text-end">
-                  <small class="text-muted">Generado: {{ new Date().toLocaleString() }}</small>
-                </div>
+          <!-- Distribución por Horas (para registros) -->
+          <div v-if="currentReportType === 'registrations' && currentReport.hourly_distribution" class="analysis-section">
+            <div class="analysis-card full-width">
+              <div class="analysis-header">
+                <h6 class="analysis-title">
+                  <i class="pi pi-clock"></i>
+                  Distribución de Check-ins por Hora
+                </h6>
               </div>
-
-              <!-- Resumen del Reporte -->
-              <div class="row mb-4" v-if="currentReport.summary">
-                <div 
-                  v-for="(value, key) in currentReport.summary" 
-                  :key="key"
-                  class="col-md-3 mb-3"
-                >
-                  <div class="card border-0 bg-light">
-                    <div class="card-body text-center p-3">
-                      <h4 class="mb-1">{{ formatValue(value, key) }}</h4>
-                      <small class="text-muted">{{ formatLabel(key) }}</small>
+              <div class="analysis-content">
+                <div class="hourly-distribution">
+                  <div v-for="(count, hour) in currentReport.hourly_distribution" :key="hour" class="hour-item">
+                    <div class="hour-label">{{ hour }}:00</div>
+                    <div class="hour-bar">
+                      <div class="hour-fill" :style="{ width: getHourlyPercentage(count) + '%' }"></div>
                     </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Datos Detallados -->
-              <div class="mb-4">
-                <div class="card">
-                  <div class="card-header">
-                    <h5>{{ getDetailTitle() }} ({{ detailedData.length }} registros)</h5>
-                  </div>
-                  <div class="card-body">
-                    <div class="table-responsive">
-                      <table class="table table-sm table-striped">
-                        <thead class="table-dark">
-                          <tr>
-                            <th v-for="header in getTableHeaders()" :key="header">{{ header }}</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr v-for="item in detailedData" :key="item.id">
-                            <td v-if="currentReportType === 'reservations'">
-                              <strong>{{ item.reservation_code }}</strong>
-                            </td>
-                            <td v-if="currentReportType === 'reservations'">
-                              <strong>{{ item.user?.name }}</strong><br>
-                              <small class="text-muted">{{ item.user?.email }}</small>
-                            </td>
-                            <td v-if="currentReportType === 'reservations'">
-                              <span class="badge bg-secondary">{{ item.room?.room_number }}</span><br>
-                              <small>{{ item.room?.room_type?.name }}</small>
-                            </td>
-                            <td v-if="currentReportType === 'reservations'">{{ formatDate(item.check_in_date) }}</td>
-                            <td v-if="currentReportType === 'reservations'">{{ formatDate(item.check_out_date) }}</td>
-                            <td v-if="currentReportType === 'reservations'">{{ item.total_nights }}</td>
-                            <td v-if="currentReportType === 'reservations'">{{ item.adults_count + item.children_count }}</td>
-                            <td v-if="currentReportType === 'reservations'">
-                              <span :class="getStatusClass(item.status)" class="badge">
-                                {{ getStatusText(item.status) }}
-                              </span>
-                            </td>
-                            <td v-if="currentReportType === 'reservations'">
-                              <strong>{{ formatCurrency(item.total_amount) }}</strong>
-                            </td>
-
-                            <!-- Registrations -->
-                            <td v-if="currentReportType === 'registrations'">
-                              <strong>{{ item.registration_code }}</strong>
-                            </td>
-                            <td v-if="currentReportType === 'registrations'">
-                              <strong>{{ item.user?.name }}</strong><br>
-                              <small class="text-muted">{{ item.user?.email }}</small>
-                            </td>
-                            <td v-if="currentReportType === 'registrations'">
-                              <span class="badge bg-secondary">{{ item.room?.room_number }}</span><br>
-                              <small>{{ item.room?.room_type?.name }}</small>
-                            </td>
-                            <td v-if="currentReportType === 'registrations'">{{ formatDateTime(item.actual_check_in) }}</td>
-                            <td v-if="currentReportType === 'registrations'">
-                              {{ item.actual_check_out ? formatDateTime(item.actual_check_out) : 'Activo' }}
-                            </td>
-                            <td v-if="currentReportType === 'registrations'">{{ calculateDuration(item.actual_check_in, item.actual_check_out) }}</td>
-                            <td v-if="currentReportType === 'registrations'">{{ getTotalGuests(item) }}</td>
-                            <td v-if="currentReportType === 'registrations'">
-                              <span :class="getRegistrationStatusClass(item.status)" class="badge">
-                                {{ getRegistrationStatusText(item.status) }}
-                              </span>
-                            </td>
-                            <td v-if="currentReportType === 'registrations'">
-                              <span class="badge bg-info">
-                                {{ item.reservation?.reservation_code?.startsWith('DIR') ? 'Directo' : 'Reserva' }}
-                              </span>
-                            </td>
-
-                            <!-- Users -->
-                            <td v-if="currentReportType === 'users'"><strong>{{ item.name }}</strong></td>
-                            <td v-if="currentReportType === 'users'">{{ item.email }}</td>
-                            <td v-if="currentReportType === 'users'">{{ item.phone || '-' }}</td>
-                            <td v-if="currentReportType === 'users'">{{ item.document_type }}: {{ item.document_number }}</td>
-                            <td v-if="currentReportType === 'users'">{{ formatDate(item.created_at) }}</td>
-                            <td v-if="currentReportType === 'users'">
-                              <span :class="item.is_active ? 'badge bg-success' : 'badge bg-danger'">
-                                {{ item.is_active ? 'Activo' : 'Inactivo' }}
-                              </span>
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Datos Enriquecidos Adicionales -->
-              
-              <!-- Top Clientes (para reservas) -->
-              <div v-if="currentReportType === 'reservations' && currentReport.top_customers && currentReport.top_customers.length > 0" class="mb-4">
-                <div class="row">
-                  <div class="col-md-6">
-                    <div class="card">
-                      <div class="card-header">
-                        <h5>Top 5 Clientes por Ingresos</h5>
-                      </div>
-                      <div class="card-body">
-                        <div class="table-responsive">
-                          <table class="table table-sm">
-                            <thead class="table-dark">
-                              <tr>
-                                <th>Cliente</th>
-                                <th>Reservas</th>
-                                <th>Total Gastado</th>
-                                <th>Noches</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              <tr v-for="customer in currentReport.top_customers" :key="customer.user.id">
-                                <td>
-                                  <strong>{{ customer.user.name }}</strong><br>
-                                  <small class="text-muted">{{ customer.user.email }}</small>
-                                </td>
-                                <td>{{ customer.reservations }}</td>
-                                <td><strong class="text-success">{{ formatCurrency(customer.total_spent) }}</strong></td>
-                                <td>{{ customer.total_nights }}</td>
-                              </tr>
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div class="col-md-6">
-                    <div class="card">
-                      <div class="card-header">
-                        <h5>Top 5 Habitaciones por Ingresos</h5>
-                      </div>
-                      <div class="card-body">
-                        <div class="table-responsive">
-                          <table class="table table-sm">
-                            <thead class="table-dark">
-                              <tr>
-                                <th>Habitación</th>
-                                <th>Reservas</th>
-                                <th>Ingresos</th>
-                                <th>Noches</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              <tr v-for="room in currentReport.top_rooms" :key="room.room.id">
-                                <td>
-                                  <span class="badge bg-secondary">{{ room.room.room_number }}</span><br>
-                                  <small>{{ room.room.room_type?.name }}</small>
-                                </td>
-                                <td>{{ room.reservations }}</td>
-                                <td><strong class="text-success">{{ formatCurrency(room.revenue) }}</strong></td>
-                                <td>{{ room.occupancy_nights }}</td>
-                              </tr>
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Análisis por Sucursal -->
-              <div v-if="currentReport.branch_stats" class="mb-4">
-                <div class="card">
-                  <div class="card-header">
-                    <h5>Análisis por Sucursal</h5>
-                  </div>
-                  <div class="card-body">
-                    <div class="table-responsive">
-                      <table class="table table-sm">
-                        <thead class="table-dark">
-                          <tr>
-                            <th>Sucursal</th>
-                            <th v-if="currentReportType === 'reservations'">Reservas</th>
-                            <th v-if="currentReportType === 'reservations'">Ingresos</th>
-                            <th v-if="currentReportType === 'reservations'">Huéspedes</th>
-                            <th v-if="currentReportType === 'reservations'">Noches</th>
-                            <th v-if="currentReportType === 'registrations'">Total</th>
-                            <th v-if="currentReportType === 'registrations'">Activos</th>
-                            <th v-if="currentReportType === 'registrations'">Completados</th>
-                            <th v-if="currentReportType === 'registrations'">Directos</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr v-for="(stats, branchName) in currentReport.branch_stats" :key="branchName">
-                            <td><strong>{{ branchName }}</strong></td>
-                            <td v-if="currentReportType === 'reservations'">{{ stats.count }}</td>
-                            <td v-if="currentReportType === 'reservations'">
-                              <strong class="text-success">{{ formatCurrency(stats.revenue) }}</strong>
-                            </td>
-                            <td v-if="currentReportType === 'reservations'">{{ stats.guests }}</td>
-                            <td v-if="currentReportType === 'reservations'">{{ stats.nights }}</td>
-                            <td v-if="currentReportType === 'registrations'">{{ stats.total }}</td>
-                            <td v-if="currentReportType === 'registrations'">
-                              <span class="badge bg-success">{{ stats.active }}</span>
-                            </td>
-                            <td v-if="currentReportType === 'registrations'">
-                              <span class="badge bg-secondary">{{ stats.completed }}</span>
-                            </td>
-                            <td v-if="currentReportType === 'registrations'">
-                              <span class="badge bg-info">{{ stats.direct }}</span>
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Métodos de Pago (para reservas) -->
-              <div v-if="currentReportType === 'reservations' && currentReport.payment_methods" class="mb-4">
-                <div class="row">
-                  <div class="col-md-6">
-                    <div class="card">
-                      <div class="card-header">
-                        <h5>Métodos de Pago</h5>
-                      </div>
-                      <div class="card-body">
-                        <div class="table-responsive">
-                          <table class="table table-sm">
-                            <thead class="table-dark">
-                              <tr>
-                                <th>Método</th>
-                                <th>Cantidad</th>
-                                <th>Porcentaje</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              <tr v-for="(count, method) in currentReport.payment_methods" :key="method">
-                                <td><strong>{{ formatPaymentMethod(method) }}</strong></td>
-                                <td>{{ count }}</td>
-                                <td>
-                                  <span class="badge bg-primary">
-                                    {{ Math.round((count / detailedData.length) * 100) }}%
-                                  </span>
-                                </td>
-                              </tr>
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Check-ins por Hora (para registros) -->
-              <div v-if="currentReportType === 'registrations' && currentReport.hourly_distribution" class="mb-4">
-                <div class="card">
-                  <div class="card-header">
-                    <h5>Distribución de Check-ins por Hora</h5>
-                  </div>
-                  <div class="card-body">
-                    <div class="row">
-                      <div v-for="(count, hour) in currentReport.hourly_distribution" :key="hour" class="col-md-2 col-sm-3 mb-2">
-                        <div class="text-center p-2 border rounded">
-                          <strong>{{ hour }}:00</strong><br>
-                          <span class="badge bg-info">{{ count }}</span>
-                        </div>
-                      </div>
-                    </div>
+                    <div class="hour-count">{{ count }}</div>
                   </div>
                 </div>
               </div>
@@ -462,7 +524,7 @@ export default {
       }
     },
     
-    // Generación de reportes simplificada
+    // Generación de reportes
     async generateReport(reportType) {
       this.loading = true
       this.currentReportType = reportType
@@ -478,7 +540,6 @@ export default {
           branch_id: this.filters.branch_id || undefined
         }
         
-        // Llamar solo a las APIs que funcionan
         switch (reportType) {
           case 'reservations':
             apiCall = adminApi.getReservations(params)
@@ -499,30 +560,19 @@ export default {
         // Extraer datos según la estructura de respuesta
         let allData = []
         if (response.data) {
-          // Para registrations
           if (response.data.success && response.data.data) {
             allData = response.data.data
-          }
-          // Para reservations (array directo)
-          else if (Array.isArray(response.data)) {
+          } else if (Array.isArray(response.data)) {
             allData = response.data
-          }
-          // Para users
-          else if (response.data.users) {
+          } else if (response.data.users) {
             allData = response.data.users
-          }
-          // Fallback
-          else if (response.data.data && Array.isArray(response.data.data)) {
+          } else if (response.data.data && Array.isArray(response.data.data)) {
             allData = response.data.data
           }
         }
         
-        console.log('All data extracted:', allData.length, 'items')
-        
         // Filtrar por fechas
         this.detailedData = this.filterByDate(allData, reportType)
-        
-        console.log('Filtered data:', this.detailedData.length, 'items')
         
         // Generar estadísticas enriquecidas
         this.currentReport = this.generateEnrichedStatistics(reportType)
@@ -543,7 +593,7 @@ export default {
       
       const startDate = new Date(this.filters.start_date)
       const endDate = new Date(this.filters.end_date)
-      endDate.setHours(23, 59, 59, 999) // Incluir todo el día final
+      endDate.setHours(23, 59, 59, 999)
       
       return data.filter(item => {
         let itemDate
@@ -566,66 +616,47 @@ export default {
       })
     },
     
-    // Generar estadísticas enriquecidas basadas en los datos
+    // Generar estadísticas enriquecidas
     generateEnrichedStatistics(reportType) {
       const total = this.detailedData.length
       
       switch (reportType) {
         case 'reservations':
           return this.generateReservationsStatistics(total)
-          
         case 'registrations':
           return this.generateRegistrationsStatistics(total)
-          
         case 'users':
           return this.generateUsersStatistics(total)
-          
         default:
           return { summary: {} }
       }
     },
 
     generateReservationsStatistics(total) {
-      // Estadísticas básicas por estado
       const confirmed = this.detailedData.filter(r => r.status === 'confirmed').length
       const cancelled = this.detailedData.filter(r => r.status === 'cancelled').length
       const completed = this.detailedData.filter(r => r.status === 'completed').length
       const checkedIn = this.detailedData.filter(r => r.status === 'checked_in').length
       const pendingPayment = this.detailedData.filter(r => r.status === 'pending_payment').length
 
-      // Cálculos financieros
       const reservasConIngresos = this.detailedData.filter(r => 
         ['confirmed', 'checked_in', 'completed'].includes(r.status)
       )
       const totalRevenue = reservasConIngresos.reduce((sum, r) => sum + parseFloat(r.total_amount || 0), 0)
-      const roomRevenue = reservasConIngresos.reduce((sum, r) => sum + parseFloat(r.room_total || 0), 0)
-      const parkingRevenue = reservasConIngresos.reduce((sum, r) => sum + parseFloat(r.parking_fee || 0), 0)
-      
-      // Análisis de huéspedes
       const totalGuests = this.detailedData.reduce((sum, r) => sum + (r.adults_count + r.children_count), 0)
       const totalNights = this.detailedData.reduce((sum, r) => sum + (r.total_nights || 0), 0)
       
-      // Reservas con estacionamiento
-      const withParking = this.detailedData.filter(r => r.needs_parking).length
-      
-      // Métodos de pago
       const paymentMethods = {}
       this.detailedData.forEach(r => {
         const method = r.payment_method || 'unknown'
         paymentMethods[method] = (paymentMethods[method] || 0) + 1
       })
 
-      // Análisis por sucursal
       const branchStats = {}
       this.detailedData.forEach(r => {
         const branchName = r.branch?.name || 'Sin sucursal'
         if (!branchStats[branchName]) {
-          branchStats[branchName] = { 
-            count: 0, 
-            revenue: 0, 
-            guests: 0,
-            nights: 0
-          }
+          branchStats[branchName] = { count: 0, revenue: 0, guests: 0, nights: 0 }
         }
         branchStats[branchName].count++
         if (['confirmed', 'checked_in', 'completed'].includes(r.status)) {
@@ -635,7 +666,6 @@ export default {
         branchStats[branchName].nights += (r.total_nights || 0)
       })
 
-      // Top clientes
       const customerStats = {}
       this.detailedData.forEach(r => {
         const userId = r.user?.id
@@ -660,7 +690,6 @@ export default {
         .sort((a, b) => b.total_spent - a.total_spent)
         .slice(0, 5)
 
-      // Top habitaciones
       const roomStats = {}
       this.detailedData.forEach(r => {
         const roomId = r.room?.id
@@ -689,20 +718,10 @@ export default {
         summary: {
           total_reservations: total,
           confirmed_reservations: confirmed,
-          cancelled_reservations: cancelled,
-          completed_reservations: completed,
-          checked_in_reservations: checkedIn,
-          pending_payment_reservations: pendingPayment,
           total_revenue: totalRevenue,
-          room_revenue: roomRevenue,
-          parking_revenue: parkingRevenue,
           total_guests: totalGuests,
           total_nights: totalNights,
-          avg_guests_per_reservation: total > 0 ? (totalGuests / total) : 0,
-          avg_nights_per_reservation: total > 0 ? (totalNights / total) : 0,
           avg_revenue_per_reservation: total > 0 ? (totalRevenue / total) : 0,
-          reservations_with_parking: withParking,
-          parking_percentage: total > 0 ? (withParking / total * 100) : 0,
           cancellation_rate: total > 0 ? (cancelled / total * 100) : 0,
           completion_rate: total > 0 ? (completed / total * 100) : 0
         },
@@ -714,43 +733,17 @@ export default {
     },
 
     generateRegistrationsStatistics(total) {
-      // Estadísticas básicas
       const active = this.detailedData.filter(r => r.status === 'active').length
       const completed = this.detailedData.filter(r => r.status === 'completed').length
-      
-      // Tipos de registro
       const direct = this.detailedData.filter(r => 
         r.reservation?.reservation_code?.startsWith('DIR')
       ).length
-      const withReservation = total - direct
 
-      // Análisis de duración de estadía
-      const completedRegistrations = this.detailedData.filter(r => 
-        r.status === 'completed' && r.actual_check_in && r.actual_check_out
-      )
-      
-      let totalDurationDays = 0
-      completedRegistrations.forEach(r => {
-        const checkIn = new Date(r.actual_check_in)
-        const checkOut = new Date(r.actual_check_out)
-        const duration = Math.ceil((checkOut - checkIn) / (1000 * 60 * 60 * 24))
-        totalDurationDays += duration
-      })
-      
-      const avgStayDuration = completedRegistrations.length > 0 ? 
-        totalDurationDays / completedRegistrations.length : 0
-
-      // Análisis por sucursal
       const branchStats = {}
       this.detailedData.forEach(r => {
         const branchName = r.branch?.name || 'Sin sucursal'
         if (!branchStats[branchName]) {
-          branchStats[branchName] = { 
-            total: 0, 
-            active: 0, 
-            completed: 0,
-            direct: 0
-          }
+          branchStats[branchName] = { total: 0, active: 0, completed: 0, direct: 0 }
         }
         branchStats[branchName].total++
         if (r.status === 'active') branchStats[branchName].active++
@@ -758,7 +751,6 @@ export default {
         if (r.reservation?.reservation_code?.startsWith('DIR')) branchStats[branchName].direct++
       })
 
-      // Análisis por hora de check-in
       const hourlyStats = {}
       this.detailedData.forEach(r => {
         if (r.actual_check_in) {
@@ -767,33 +759,9 @@ export default {
         }
       })
 
-      // Top habitaciones por registros
-      const roomStats = {}
-      this.detailedData.forEach(r => {
-        const roomId = r.room?.id
-        if (roomId) {
-          if (!roomStats[roomId]) {
-            roomStats[roomId] = {
-              room: r.room,
-              checkins: 0,
-              current_guest: null
-            }
-          }
-          roomStats[roomId].checkins++
-          if (r.status === 'active') {
-            roomStats[roomId].current_guest = r.user
-          }
-        }
-      })
-
-      const topRooms = Object.values(roomStats)
-        .sort((a, b) => b.checkins - a.checkins)
-        .slice(0, 5)
-
-      // Huéspedes totales
       const totalGuests = this.detailedData.reduce((sum, r) => {
         const additionalGuests = r.additional_guests?.length || 0
-        return sum + additionalGuests + 1 // +1 por el huésped principal
+        return sum + additionalGuests + 1
       }, 0)
 
       return {
@@ -802,41 +770,23 @@ export default {
           active_registrations: active,
           completed_registrations: completed,
           direct_registrations: direct,
-          reservation_registrations: withReservation,
           direct_percentage: total > 0 ? (direct / total * 100) : 0,
           completion_rate: total > 0 ? (completed / total * 100) : 0,
-          avg_stay_duration: avgStayDuration,
-          total_guests: totalGuests,
-          avg_guests_per_registration: total > 0 ? (totalGuests / total) : 0
+          total_guests: totalGuests
         },
         branch_stats: branchStats,
-        hourly_distribution: hourlyStats,
-        top_rooms: topRooms
+        hourly_distribution: hourlyStats
       }
     },
 
     generateUsersStatistics(total) {
-      // Estadísticas básicas
       const active = this.detailedData.filter(u => u.is_active).length
       const inactive = total - active
 
-      // Análisis por tipo de documento
       const documentTypes = {}
       this.detailedData.forEach(u => {
         const docType = u.document_type || 'unknown'
         documentTypes[docType] = (documentTypes[docType] || 0) + 1
-      })
-
-      // Usuarios con reservas (si hay información de reservas)
-      const usersWithReservations = this.detailedData.filter(u => 
-        u.reservations_count && u.reservations_count > 0
-      ).length
-
-      // Análisis temporal de registro
-      const registrationsByMonth = {}
-      this.detailedData.forEach(u => {
-        const month = new Date(u.created_at).toISOString().substring(0, 7) // YYYY-MM
-        registrationsByMonth[month] = (registrationsByMonth[month] || 0) + 1
       })
 
       return {
@@ -844,13 +794,16 @@ export default {
           total_new_users: total,
           active_new_users: active,
           inactive_new_users: inactive,
-          activation_rate: total > 0 ? (active / total * 100) : 0,
-          users_with_reservations: usersWithReservations,
-          reservation_rate: total > 0 ? (usersWithReservations / total * 100) : 0
+          activation_rate: total > 0 ? (active / total * 100) : 0
         },
-        document_type_distribution: documentTypes,
-        monthly_registrations: registrationsByMonth
+        document_type_distribution: documentTypes
       }
+    },
+
+    getHourlyPercentage(count) {
+      if (!this.currentReport.hourly_distribution) return 0
+      const maxCount = Math.max(...Object.values(this.currentReport.hourly_distribution))
+      return maxCount > 0 ? (count / maxCount * 100) : 0
     },
     
     clearReport() {
@@ -859,7 +812,7 @@ export default {
       this.detailedData = []
     },
     
-    // Descargar PDF simplificado
+    // Descargar PDF
     downloadPDF() {
       try {
         const htmlContent = this.generateReportHTML()
@@ -943,13 +896,11 @@ export default {
     generateTableHTML() {
       let html = '<table><thead><tr>'
       
-      // Headers
       this.getTableHeaders().forEach(header => {
         html += `<th>${header}</th>`
       })
       html += '</tr></thead><tbody>'
       
-      // Datos
       this.detailedData.forEach(item => {
         html += '<tr>'
         
@@ -995,7 +946,7 @@ export default {
       return html
     },
     
-    // Utilidades
+    // Métodos de utilidad
     getReportTitle(type) {
       const titles = {
         reservations: 'Reporte Detallado de Reservas',
@@ -1022,6 +973,23 @@ export default {
       }
       return headers[this.currentReportType] || []
     },
+
+    getMetricClass(key) {
+      if (key.includes('revenue') || key.includes('total_amount')) return 'revenue'
+      if (key.includes('confirmed') || key.includes('active')) return 'success'
+      if (key.includes('cancelled') || key.includes('inactive')) return 'danger'
+      if (key.includes('pending') || key.includes('rate')) return 'warning'
+      return 'primary'
+    },
+
+    getMetricIcon(key) {
+      if (key.includes('revenue') || key.includes('amount')) return 'pi pi-dollar'
+      if (key.includes('reservations') || key.includes('registrations')) return 'pi pi-calendar'
+      if (key.includes('users') || key.includes('guests')) return 'pi pi-users'
+      if (key.includes('nights')) return 'pi pi-moon'
+      if (key.includes('rate') || key.includes('percentage')) return 'pi pi-chart-line'
+      return 'pi pi-info-circle'
+    },
     
     formatValue(value, key) {
       if (value === null || value === undefined) return '-'
@@ -1045,19 +1013,17 @@ export default {
       const labels = {
         total_reservations: 'Total Reservas',
         confirmed_reservations: 'Confirmadas',
-        cancelled_reservations: 'Canceladas',
-        completed_reservations: 'Completadas',
-        checked_in_reservations: 'Con Check-in',
         total_revenue: 'Ingresos Totales',
-        avg_reservation_value: 'Valor Promedio',
+        total_guests: 'Total Huéspedes',
+        total_nights: 'Total Noches',
+        avg_revenue_per_reservation: 'Promedio por Reserva',
         cancellation_rate: 'Tasa Cancelación',
+        completion_rate: 'Tasa Finalización',
         total_registrations: 'Total Registros',
         active_registrations: 'Activos',
         completed_registrations: 'Completados',
         direct_registrations: 'Directos',
-        reservation_registrations: 'Con Reserva',
         direct_percentage: '% Directos',
-        completion_rate: 'Tasa Finalización',
         total_new_users: 'Usuarios Nuevos',
         active_new_users: 'Activos',
         inactive_new_users: 'Inactivos',
@@ -1088,13 +1054,13 @@ export default {
     
     getStatusClass(status) {
       const classes = {
-        confirmed: 'bg-success',
-        checked_in: 'bg-info',
-        completed: 'bg-secondary',
-        cancelled: 'bg-danger',
-        pending_payment: 'bg-warning'
+        confirmed: 'status-badge success',
+        checked_in: 'status-badge info',
+        completed: 'status-badge secondary',
+        cancelled: 'status-badge danger',
+        pending_payment: 'status-badge warning'
       }
-      return classes[status] || 'bg-warning'
+      return classes[status] || 'status-badge warning'
     },
     
     getStatusText(status) {
@@ -1110,10 +1076,10 @@ export default {
     
     getRegistrationStatusClass(status) {
       const classes = {
-        active: 'bg-success',
-        completed: 'bg-secondary'
+        active: 'status-badge success',
+        completed: 'status-badge secondary'
       }
-      return classes[status] || 'bg-warning'
+      return classes[status] || 'status-badge warning'
     },
     
     getRegistrationStatusText(status) {
@@ -1138,39 +1104,273 @@ export default {
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
       
       return diffDays + (diffDays === 1 ? ' día' : ' días')
-    },
-
-    formatPaymentMethod(method) {
-      const methods = {
-        'cash': 'Efectivo',
-        'qr': 'QR/Transferencia',
-        'card': 'Tarjeta',
-        'unknown': 'No especificado'
-      }
-      return methods[method] || method
     }
   }
 }
 </script>
 
 <style scoped>
-.report-card {
+.reports-dashboard {
+  background-color: #f8f9fa;
+  min-height: 100vh;
+  padding: 1.5rem 0;
+}
+
+.container-xl {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+/* Header profesional */
+.reports-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 2rem;
+  border-radius: 1rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header-title {
+  font-size: 1.75rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.header-subtitle {
+  color: rgba(255, 255, 255, 0.9);
+  margin: 0.5rem 0 0 0;
+  font-size: 0.95rem;
+}
+
+.header-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  text-decoration: none;
+  border: none;
   cursor: pointer;
-  transition: all 0.3s ease;
-  border: 2px solid transparent;
+  transition: all 0.2s;
+}
+
+.btn-success {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+}
+
+.btn-success:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: white;
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.btn-outline-secondary {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.btn-outline-secondary:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+/* Cards */
+.card {
+  background: white;
+  border-radius: 1rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e5e7eb;
+  margin-bottom: 1.5rem;
+  overflow: hidden;
+}
+
+.card-header {
+  background-color: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.card-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.card-body {
+  padding: 1.5rem;
+}
+
+/* Filtros */
+.filters-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.filter-label {
+  font-weight: 500;
+  color: #374151;
+  font-size: 0.875rem;
+}
+
+.form-control, .form-select {
+  padding: 0.75rem 1rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  transition: all 0.2s;
+}
+
+.form-control:focus, .form-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Grid de reportes */
+.reports-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.report-card {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 1rem;
+  padding: 1.5rem;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
 }
 
 .report-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-  border-color: #007bff;
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  border-color: #3b82f6;
 }
 
-.spinner-border-lg {
-  width: 3rem;
-  height: 3rem;
+.report-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  color: white;
+  flex-shrink: 0;
 }
 
+.report-icon.reservations {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+}
+
+.report-icon.registrations {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+
+.report-icon.users {
+  background: linear-gradient(135deg, #10b981, #059669);
+}
+
+.report-content {
+  flex: 1;
+}
+
+.report-content h6 {
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0 0 0.5rem 0;
+  font-size: 1rem;
+}
+
+.report-content p {
+  color: #6b7280;
+  margin: 0 0 1rem 0;
+  font-size: 0.875rem;
+}
+
+.report-features {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.feature-tag {
+  background: #e5e7eb;
+  color: #374151;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+/* Loading */
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+}
+
+.loading-content {
+  text-align: center;
+  color: #6b7280;
+}
+
+.loading-spinner {
+  font-size: 3rem;
+  color: #3b82f6;
+  margin-bottom: 1rem;
+}
+
+.loading-content h4 {
+  color: #1f2937;
+  margin-bottom: 0.5rem;
+}
+
+/* Vista del reporte */
 .report-view {
   animation: fadeIn 0.5s ease;
 }
@@ -1180,8 +1380,702 @@ export default {
   to { opacity: 1; transform: translateY(0); }
 }
 
-.table-responsive {
+.report-header {
+  background: white;
+  border-radius: 1rem;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e5e7eb;
+}
+
+.report-header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.report-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0 0 0.5rem 0;
+}
+
+.report-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+.meta-item i {
+  color: #9ca3af;
+}
+
+/* Métricas */
+.metrics-section {
+  margin-bottom: 2rem;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+}
+
+.metric-card {
+  background: white;
+  border-radius: 1rem;
+  padding: 1.5rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e5e7eb;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.metric-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+}
+
+.metric-card.revenue::before {
+  background: linear-gradient(90deg, #10b981, #059669);
+}
+.metric-card.success::before {
+  background: linear-gradient(90deg, #10b981, #059669);
+}
+.metric-card.danger::before {
+  background: linear-gradient(90deg, #ef4444, #dc2626);
+}
+.metric-card.warning::before {
+  background: linear-gradient(90deg, #f59e0b, #d97706);
+}
+.metric-card.primary::before {
+  background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+}
+
+.metric-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+.metric-icon {
+  width: 50px;
+  height: 50px;
+  border-radius: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  color: white;
+  flex-shrink: 0;
+}
+
+.metric-card.revenue .metric-icon {
+  background: linear-gradient(135deg, #10b981, #059669);
+}
+.metric-card.success .metric-icon {
+  background: linear-gradient(135deg, #10b981, #059669);
+}
+.metric-card.danger .metric-icon {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+}
+.metric-card.warning .metric-icon {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+.metric-card.primary .metric-icon {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+}
+
+.metric-content {
+  flex: 1;
+}
+
+.metric-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1f2937;
+  line-height: 1;
+}
+
+.metric-label {
+  color: #6b7280;
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+}
+
+/* Tabla de datos */
+.detailed-data-card {
+  margin-bottom: 2rem;
+}
+
+.records-count {
+  background: #f3f4f6;
+  color: #6b7280;
+  padding: 0.25rem 0.75rem;
+  border-radius: 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.table-container {
+  overflow-x: auto;
   max-height: 600px;
-  overflow-y: auto;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.table-header {
+  background: #1f2937;
+  color: white;
+  padding: 1rem 0.75rem;
+  text-align: left;
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.table-row {
+  border-bottom: 1px solid #f3f4f6;
+  transition: background-color 0.2s;
+}
+
+.table-row:hover {
+  background-color: #f9fafb;
+}
+
+.table-cell {
+  padding: 0.75rem;
+  vertical-align: top;
+}
+
+.code-cell strong {
+  color: #1f2937;
+  font-weight: 600;
+}
+
+.user-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.user-cell strong {
+  color: #1f2937;
+}
+
+.user-cell small {
+  color: #6b7280;
+  font-size: 0.75rem;
+}
+
+.room-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.room-number {
+  background: #f3f4f6;
+  color: #374151;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.375rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.room-cell small {
+  color: #6b7280;
+  font-size: 0.75rem;
+}
+
+.document-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.doc-type {
+  font-weight: 500;
+  color: #374151;
+}
+
+.doc-number {
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+.status-badge {
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.status-badge.success {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.status-badge.info {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.status-badge.warning {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status-badge.danger {
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.status-badge.secondary {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.status-badge.active {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.status-badge.inactive {
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.nights-badge, .guests-badge, .duration-badge {
+  background: #e5e7eb;
+  color: #374151;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.type-badge {
+  background: #dbeafe;
+  color: #1e40af;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.amount-text {
+  color: #059669;
+  font-weight: 600;
+}
+
+/* Análisis adicional */
+.additional-analysis {
+  margin-top: 2rem;
+}
+
+.analysis-section {
+  margin-bottom: 2rem;
+}
+
+.analysis-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 1.5rem;
+}
+
+.analysis-card {
+  background: white;
+  border-radius: 1rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e5e7eb;
+  overflow: hidden;
+}
+
+.analysis-card.full-width {
+  grid-column: 1 / -1;
+}
+
+.analysis-header {
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 1rem 1.5rem;
+}
+
+.analysis-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.analysis-content {
+  padding: 1.5rem;
+}
+
+/* Top clientes */
+.top-customers {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.customer-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: #f9fafb;
+  border-radius: 0.75rem;
+  border: 1px solid #e5e7eb;
+}
+
+.customer-rank {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 0.875rem;
+  flex-shrink: 0;
+}
+
+.customer-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.customer-info strong {
+  color: #1f2937;
+  font-weight: 600;
+}
+
+.customer-info small {
+  color: #6b7280;
+  font-size: 0.75rem;
+}
+
+.customer-stats {
+  display: flex;
+  gap: 1rem;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.stat-value {
+  font-weight: 600;
+  color: #1f2937;
+  font-size: 0.875rem;
+}
+
+.stat-label {
+  color: #6b7280;
+  font-size: 0.75rem;
+}
+
+/* Top habitaciones */
+.top-rooms {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.room-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: #f9fafb;
+  border-radius: 0.75rem;
+  border: 1px solid #e5e7eb;
+}
+
+.room-rank {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 0.875rem;
+  flex-shrink: 0;
+}
+
+.room-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.room-info .room-number {
+  background: #e5e7eb;
+  color: #374151;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.375rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  display: inline-block;
+  width: fit-content;
+}
+
+.room-info small {
+  color: #6b7280;
+  font-size: 0.75rem;
+}
+
+.room-stats {
+  display: flex;
+  gap: 1rem;
+}
+
+/* Estadísticas por sucursal */
+.branch-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.branch-stat-item {
+  padding: 1rem;
+  background: #f9fafb;
+  border-radius: 0.75rem;
+  border: 1px solid #e5e7eb;
+}
+
+.branch-name {
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 0.75rem;
+  font-size: 0.875rem;
+}
+
+.branch-metrics {
+  display: flex;
+  justify-content: space-between;
+}
+
+.metric-group {
+  display: flex;
+  gap: 2rem;
+}
+
+.metric-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.metric-item .metric-value {
+  font-weight: 600;
+  color: #1f2937;
+  font-size: 0.875rem;
+}
+
+.metric-item .metric-label {
+  color: #6b7280;
+  font-size: 0.75rem;
+}
+
+/* Distribución por horas */
+.hourly-distribution {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+  gap: 1rem;
+}
+
+.hour-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: #f9fafb;
+  border-radius: 0.5rem;
+  border: 1px solid #e5e7eb;
+}
+
+.hour-label {
+  font-weight: 500;
+  color: #374151;
+  font-size: 0.75rem;
+}
+
+.hour-bar {
+  width: 100%;
+  height: 8px;
+  background: #e5e7eb;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.hour-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+  transition: width 0.3s ease;
+}
+
+.hour-count {
+  font-weight: 600;
+  color: #1f2937;
+  font-size: 0.875rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .header-content {
+    flex-direction: column;
+    gap: 1rem;
+    text-align: center;
+  }
+
+  .header-actions {
+    justify-content: center;
+  }
+
+  .filters-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .reports-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .report-card {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+
+  .report-header-content {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .report-meta {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .analysis-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .customer-item,
+  .room-item {
+    flex-direction: column;
+    text-align: center;
+    gap: 0.75rem;
+  }
+
+  .customer-stats,
+  .room-stats {
+    justify-content: center;
+  }
+
+  .branch-metrics {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .metric-group {
+    justify-content: center;
+  }
+
+  .hourly-distribution {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .table-container {
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .container-xl {
+    padding: 0 0.5rem;
+  }
+
+  .reports-header {
+    padding: 1.5rem;
+  }
+
+  .card-body {
+    padding: 1rem;
+  }
+
+  .metrics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .metric-card {
+    flex-direction: column;
+    text-align: center;
+    gap: 0.75rem;
+  }
+
+  .customer-stats,
+  .room-stats {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .hourly-distribution {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .table-container {
+    font-size: 0.75rem;
+  }
+
+  .table-header,
+  .table-cell {
+    padding: 0.5rem 0.25rem;
+  }
 }
 </style>
